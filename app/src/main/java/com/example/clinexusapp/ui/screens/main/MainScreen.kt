@@ -13,9 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -30,7 +28,6 @@ import com.example.clinexusapp.ui.screens.doctors.DoctorListScreen
 import com.example.clinexusapp.ui.screens.chat.ChatScreen
 import com.example.clinexusapp.ui.screens.profile.ProfileScreen
 import com.example.clinexusapp.ui.screens.appointments.AppointmentHistoryScreen
-import com.example.clinexusapp.ui.theme.*
 import com.example.clinexusapp.util.SessionManager
 import com.example.clinexusapp.viewmodel.*
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,7 +37,7 @@ import com.example.clinexusapp.api.AuthRepository
 import com.example.clinexusapp.api.RetrofitClient
 
 @Composable
-fun MainScreen(rootNavController: NavHostController, settingsViewModel: SettingsViewModel) {
+fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER") settingsViewModel: SettingsViewModel) {
     val repository = AuthRepository(RetrofitClient.instance)
     val addressRepository = AddressRepository(RetrofitClient.addressInstance)
     val appointmentRepository = AppointmentRepository(RetrofitClient.appointmentInstance)
@@ -48,23 +45,21 @@ fun MainScreen(rootNavController: NavHostController, settingsViewModel: Settings
     val navController = rememberNavController()
     Scaffold(
         bottomBar = { TealBottomBar(navController = navController) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
         ) {
             composable(route = Screen.Dashboard.route) {
                 val dashboardViewModel: DashboardViewModel = viewModel(factory = factory)
                 DashboardScreen(dashboardViewModel, rootNavController)
             }
             composable(route = Screen.DoctorList.route) {
-                DoctorListScreen(
-                    onDoctorClick = { name ->
+                DoctorListScreen { name ->
                         rootNavController.navigate(Screen.AppointmentBooking.createRoute(name))
                     }
-                )
             }
             composable(route = Screen.Chat.route) {
                 val chatViewModel: ChatViewModel = viewModel(factory = factory)
@@ -138,14 +133,13 @@ fun TealBottomBar(navController: NavHostController) {
                 val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
                 TealNavItem(
                     screen = screen,
-                    isSelected = isSelected,
-                    onClick = {
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.findStartDestination().id)
-                            launchSingleTop = true
-                        }
+                    isSelected = isSelected
+                ) {
+                    navController.navigate(screen.route) {
+                        popUpTo(navController.graph.findStartDestination().id)
+                        launchSingleTop = true
                     }
-                )
+                }
             }
         }
     }

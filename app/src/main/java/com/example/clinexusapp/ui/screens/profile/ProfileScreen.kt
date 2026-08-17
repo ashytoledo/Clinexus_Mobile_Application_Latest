@@ -8,14 +8,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -36,14 +34,14 @@ fun ProfileScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPersonalInformation: () -> Unit,
     onNavigateToHistory: () -> Unit,
-    viewModel: ProfileViewModel
+    viewModel: ProfileViewModel,
 ) {
     val user by SessionManager.currentUser.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
     
     // Auto-fetch if names are missing
     LaunchedEffect(user) {
-        if (user != null && user?.firstName == null) {
+        if ((user != null) && (user?.firstName == null)) {
             viewModel.fetchProfile()
         }
     }
@@ -52,7 +50,7 @@ fun ProfileScreen(
     val displayLastName = user?.lastName ?: ""
     val defaultEmail = user?.email ?: "Not available"
 
-    var isEditing by remember { mutableStateOf(false) }
+    var isEditing by remember { mutableStateOf(value = false) }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -77,7 +75,7 @@ fun ProfileScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -155,7 +153,7 @@ fun ProfileScreen(
                     )
                     ProfileMenuItem(
                         title = "My Appointments", 
-                        icon = Icons.Default.EventNote,
+                        icon = Icons.AutoMirrored.Filled.EventNote,
                         iconColor = DeepTeal,
                         iconBg = MintSparkle,
                         onClick = onNavigateToHistory

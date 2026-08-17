@@ -113,7 +113,7 @@ fun BookingDateSelector(selected: String, onSelect: (String) -> Unit) {
                     .shadow(
                         elevation = if (isSelected) 12.dp else 2.dp,
                         shape = RoundedCornerShape(22.dp),
-                        spotColor = if (isSelected) DeepTeal.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.05f)
+                        spotColor = if (isSelected) DeepTeal.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.05f),
                     ),
                 shape = RoundedCornerShape(22.dp),
                 color = if (isSelected) VibrantTeal else White
@@ -192,7 +192,7 @@ fun AppointmentBookingScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(28.dp)
+                verticalArrangement = Arrangement.spacedBy(28.dp),
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
                 
@@ -317,9 +317,12 @@ fun AppointmentBookingScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         VibrantButton(
-                            text = if (bookingState is Resource.Loading) "Processing..." else "Continue",
-                            onClick = { 
-                                selectedSlot?.let { viewModel.createAppointment(selectedDate, it) }
+                            text = if (bookingState is Resource.Loading) "Processing..." else "Authorize Booking",
+                            onClick = {
+                                viewModel.createAppointment(
+                                    selectedDate,
+                                    selectedSlot!!
+                                )
                             },
                             enabled = bookingState !is Resource.Loading
                         )

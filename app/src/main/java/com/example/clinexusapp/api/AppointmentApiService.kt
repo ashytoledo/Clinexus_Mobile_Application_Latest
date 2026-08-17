@@ -16,13 +16,13 @@ interface AppointmentApiService {
     // Patient appointments
     @GET("api/appointments")
     suspend fun getPatientAppointments(
-        @Header("Authorization") token: String
+        @Header("Authorization") token: String,
     ): Response<List<AppointmentDTO>>
 
     // Bookable services (FIXED ROUTE)
     @GET("api/appointments/requires-appointment-services")
     suspend fun getBookableServices(
-        @Header("Authorization") token: String
+        @Header("Authorization") token: String,
     ): Response<List<BookableServiceDTO>>
 
 
@@ -31,7 +31,7 @@ interface AppointmentApiService {
     suspend fun getAvailableTimeslots(
         @Header("Authorization") token: String,
         @Query("dentistID") dentistId: Int,
-        @Query("appointmentDate") appointmentDate: String
+        @Query("appointmentDate") appointmentDate: String,
     ): Response<AvailableTimeslotsResponse>
 
     // Create appointment

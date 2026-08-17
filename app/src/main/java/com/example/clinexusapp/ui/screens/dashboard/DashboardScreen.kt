@@ -125,7 +125,7 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = "Upcoming Appointment",
@@ -200,7 +200,7 @@ fun DashboardScreen(
                             } else {
                                 Column(
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     Text(
                                         text = "No upcoming appointments",
