@@ -2,6 +2,7 @@ package com.example.clinexusapp.model
 
 import com.google.gson.annotations.SerializedName
 
+
 data class DentistDTO(
     @SerializedName("dentist_id") val dentistId: Int,
     @SerializedName("dentist_name") val dentistName: String,
@@ -29,9 +30,19 @@ data class AvailableSlotDTO(
     @SerializedName("start_time") val startTime: String,
     @SerializedName("end_time") val endTime: String
 )
-
+data class PatientAppointmentsResponse(
+    val success: Boolean,
+    val appointments: List<AppointmentDTO>
+)
 data class AvailableTimeslotsResponse(
     @SerializedName("availableTimeslots") val availableTimeslots: List<String>
+)
+
+data class DentistScheduleDTO(
+    @SerializedName("dentist_id") val dentistId: Int,
+    @SerializedName("working_days") val workingDays: List<String>, // e.g., ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    @SerializedName("start_time") val startTime: String, // e.g., "08:00:00"
+    @SerializedName("end_time") val endTime: String     // e.g., "17:00:00"
 )
 
 data class CreateAppointmentRequest(

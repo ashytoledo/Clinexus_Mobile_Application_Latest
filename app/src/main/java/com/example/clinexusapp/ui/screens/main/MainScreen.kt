@@ -72,7 +72,7 @@ fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER
                     onNavigateToBooking = {
                         rootNavController.navigate(Screen.AppointmentBooking.route)
                     },
-                    viewModel = historyViewModel
+                    viewModel = historyViewModel,
                 )
             }
             composable(route = Screen.Profile.route) {
@@ -94,7 +94,7 @@ fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER
                     onNavigateToHistory = {
                         rootNavController.navigate(Screen.AppointmentHistory.route)
                     },
-                    viewModel = profileViewModel
+                    viewModel = profileViewModel,
                 )
             }
         }

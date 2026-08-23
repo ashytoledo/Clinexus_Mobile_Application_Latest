@@ -8,14 +8,12 @@ import com.google.gson.reflect.TypeToken
 import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
-
+import android.util.Log
 class AppointmentRepository(
     private val apiService: AppointmentApiService,
 ) {
 
-    /**
-     * Extracts the raw JWT token without any "Bearer " prefix.
-     */
+
     private fun getCleanToken(): String? {
         val raw = SessionManager.token?.trim() ?: return null
         return if (raw.startsWith("Bearer ", ignoreCase = true)) {
@@ -25,9 +23,6 @@ class AppointmentRepository(
         }
     }
 
-    /**
-     * Standardizes the Authorization header to: "Bearer <token>"
-     */
     private fun getAuthorizationHeader(): String? {
         val clean = getCleanToken() ?: return null
         return "Bearer $clean"
@@ -53,7 +48,7 @@ class AppointmentRepository(
                 val errorMap: Map<String, Any> =
                     Gson().fromJson(
                         errorBodyString,
-                        type
+                        type,
                     )
 
                 serverMessage =
@@ -91,10 +86,6 @@ class AppointmentRepository(
     }
 
 
-    // ============================================================
-    // DENTISTS
-    // ============================================================
-
     suspend fun getActiveDentists(): Resource<List<DentistDTO>> {
 
         return try {
@@ -102,9 +93,9 @@ class AppointmentRepository(
             val token = getAuthorizationHeader()
 
                 ?: return Resource.Error(
-                    "Not authenticated. Please login again."
+                    "Not authenticated. Please login again.",
                 )
-                
+
             val rawToken = SessionManager.token ?: ""
 
             val response =
@@ -113,7 +104,7 @@ class AppointmentRepository(
             if (response.isSuccessful) {
 
                 Resource.Success(
-                    response.body() ?: emptyList()
+                    response.body() ?: emptyList(),
                 )
 
             } else {
@@ -134,9 +125,24 @@ class AppointmentRepository(
     }
 
 
-    // ============================================================
-    // SERVICES
-    // ============================================================
+    suspend fun getDentistSchedule(dentistId: Int): Resource<DentistScheduleDTO> {
+        return try {
+            val token = getAuthorizationHeader()
+                ?: return Resource.Error("Not authenticated. Please login again.")
+
+            val response = apiService.getDentistSchedule(token, dentistId)
+
+            if (response.isSuccessful) {
+                Resource.Success(response.body()!!)
+            } else {
+                handleError(response, "Failed to fetch dentist schedule")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "An error occurred while loading schedule.")
+        }
+    }
+
+
 
     suspend fun getBookableServices():
             Resource<List<BookableServiceDTO>> {
@@ -146,7 +152,7 @@ class AppointmentRepository(
             val token = getAuthorizationHeader()
 
                 ?: return Resource.Error(
-                    "Not authenticated. Please login again."
+                    "Not authenticated. Please login again.",
                 )
 
             val response =
@@ -155,7 +161,7 @@ class AppointmentRepository(
             if (response.isSuccessful) {
 
                 Resource.Success(
-                    response.body() ?: emptyList()
+                    response.body() ?: emptyList(),
                 )
 
             } else {
@@ -176,9 +182,6 @@ class AppointmentRepository(
     }
 
 
-    // ============================================================
-    // PATIENT APPOINTMENTS
-    // ============================================================
 
     suspend fun getPatientAppointments():
             Resource<List<AppointmentDTO>> {
@@ -188,25 +191,21 @@ class AppointmentRepository(
             val token = getAuthorizationHeader()
 
                 ?: return Resource.Error(
-                    "Not authenticated. Please login again."
+                    "Not authenticated. Please login again.",
                 )
 
-            val response =
-                apiService.getPatientAppointments(token)
+            val response = apiService.getPatientAppointments(token)
 
             if (response.isSuccessful) {
+                // ✅ Extract the wrapper, then get the list from it
+                val wrapper = response.body()
+                val allAppointments = wrapper?.appointments ?: emptyList()
 
-                Resource.Success(
-                    response.body()
-                        ?: emptyList()
-                )
+                Log.d("AppointmentRepo", "Fetched appointments: $allAppointments")
+                Resource.Success(allAppointments)   // ← Pass the LIST, not the wrapper
 
             } else {
-
-                handleError(
-                    response,
-                    "Failed to fetch appointments"
-                )
+                handleError(response, "Failed to fetch appointments")
             }
 
         } catch (e: Exception) {
@@ -219,10 +218,6 @@ class AppointmentRepository(
     }
 
 
-    // ============================================================
-    // AVAILABLE TIMESLOTS
-    // ============================================================
-
     suspend fun getAvailableTimeslots(
         dentistId: Int,
         date: String
@@ -233,7 +228,7 @@ class AppointmentRepository(
             val token = getAuthorizationHeader()
 
                 ?: return Resource.Error(
-                    "Not authenticated. Please login again."
+                    "Not authenticated. Please login again.",
                 )
 
             val response =
@@ -296,10 +291,6 @@ class AppointmentRepository(
     }
 
 
-    // ============================================================
-    // CREATE APPOINTMENT
-    // ============================================================
-
     suspend fun createAppointment(
         request: CreateAppointmentRequest
     ): Resource<CreateAppointmentResponse> {
@@ -309,7 +300,7 @@ class AppointmentRepository(
             val token = getAuthorizationHeader()
 
                 ?: return Resource.Error(
-                    "Not authenticated. Please login again."
+                    "Not authenticated. Please login again.",
                 )
 
             val response =
@@ -351,10 +342,6 @@ class AppointmentRepository(
     }
 
 
-    // ============================================================
-    // RESCHEDULE
-    // ============================================================
-
     suspend fun rescheduleAppointment(
         appointmentId: Int,
         request: RescheduleRequest
@@ -365,7 +352,7 @@ class AppointmentRepository(
             val token = getAuthorizationHeader()
 
                 ?: return Resource.Error(
-                    "Not authenticated. Please login again."
+                    "Not authenticated. Please login again.",
                 )
 
             val response =
@@ -408,10 +395,6 @@ class AppointmentRepository(
     }
 
 
-    // ============================================================
-    // CANCEL
-    // ============================================================
-
     suspend fun cancelAppointment(
         appointmentId: Int,
         request: CancelAppointmentRequest
@@ -422,7 +405,7 @@ class AppointmentRepository(
             val token = getAuthorizationHeader()
 
                 ?: return Resource.Error(
-                    "Not authenticated. Please login again."
+                    "Not authenticated. Please login again.",
                 )
 
             val response =

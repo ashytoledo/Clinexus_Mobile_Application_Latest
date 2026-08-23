@@ -18,21 +18,21 @@ sealed class BottomBarScreen(
     object Doctors : BottomBarScreen(
         route = Screen.DoctorList.route,
         title = "Doctors",
-        icon = Icons.Default.MedicalServices
+        icon = Icons.Default.MedicalServices,
     )
     object Appointments : BottomBarScreen(
         route = Screen.AppointmentHistory.route,
         title = "Visits",
-        icon = Icons.AutoMirrored.Filled.EventNote
+        icon = Icons.AutoMirrored.Filled.EventNote,
     )
     object Chat : BottomBarScreen(
         route = Screen.Chat.route,
         title = "Chat",
-        icon = Icons.AutoMirrored.Filled.Chat
+        icon = Icons.AutoMirrored.Filled.Chat,
     )
     object Profile : BottomBarScreen(
         route = Screen.Profile.route,
         title = "Profile",
-        icon = Icons.Default.Person
+        icon = Icons.Default.Person,
     )
 }

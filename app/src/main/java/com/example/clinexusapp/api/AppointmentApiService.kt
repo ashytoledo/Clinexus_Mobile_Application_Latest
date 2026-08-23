@@ -13,13 +13,19 @@ interface AppointmentApiService {
         @Header("Authorization") tokenHeader: String,
     ): Response<List<DentistDTO>>
 
-    // Patient appointments
-    @GET("api/appointments")
+    // Dentist schedule
+    @GET("api/appointments/dentists/{dentistID}/schedule")
+    suspend fun getDentistSchedule(
+        @Header("Authorization") token: String,
+        @Path("dentistID") dentistId: Int
+    ): Response<DentistScheduleDTO>
+
+
+    @GET("api/patient-appointments")
     suspend fun getPatientAppointments(
         @Header("Authorization") token: String,
-    ): Response<List<AppointmentDTO>>
+    ):  Response<PatientAppointmentsResponse>
 
-    // Bookable services (FIXED ROUTE)
     @GET("api/appointments/requires-appointment-services")
     suspend fun getBookableServices(
         @Header("Authorization") token: String,

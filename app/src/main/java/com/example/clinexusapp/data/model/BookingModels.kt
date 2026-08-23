@@ -29,3 +29,4 @@ data class Booking(
     val durationMinutes: Int,
     val dentistId: Int
 )
+

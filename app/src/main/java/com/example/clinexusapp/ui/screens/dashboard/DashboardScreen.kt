@@ -162,7 +162,7 @@ fun DashboardScreen(
                                                 fontSize = 17.sp,
                                             )
                                             Text(
-                                                text = "${nextAppt!!.date} • ${nextAppt!!.startTime}", 
+                                                text = "${com.example.clinexusapp.util.DateUtils.formatDisplayDate(nextAppt!!.appointmentDate)} • ${com.example.clinexusapp.util.DateUtils.formatDisplayTime(nextAppt!!.startTime)}", 
                                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), 
                                                 fontSize = 13.sp,
                                             )
@@ -205,12 +205,12 @@ fun DashboardScreen(
                                     Text(
                                         text = "No upcoming appointments",
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        fontSize = 15.sp
+                                        fontSize = 15.sp,
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     VibrantButton(
                                         text = "Book Now",
-                                        onClick = { rootNavController.navigate(Screen.AppointmentBooking.route) }
+                                        onClick = { rootNavController.navigate(Screen.AppointmentBooking.route) },
                                     )
                                 }
                             }

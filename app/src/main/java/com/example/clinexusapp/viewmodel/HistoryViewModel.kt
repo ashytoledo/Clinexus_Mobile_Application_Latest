@@ -27,7 +27,22 @@ class HistoryViewModel(
     fun fetchHistory() {
         viewModelScope.launch {
             _historyState.value = Resource.Loading()
-            _historyState.value = appointmentRepository.getPatientAppointments()
+            val result = appointmentRepository.getPatientAppointments()
+            
+            if (result is Resource.Success && result.data != null) {
+                val sorted = result.data.sortedByDescending { 
+                    try {
+                        val cleanDate = it.appointmentDate.substringBefore("T")
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                        sdf.parse("$cleanDate ${it.startTime}")
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+                _historyState.value = Resource.Success(sorted)
+            } else {
+                _historyState.value = result
+            }
         }
     }
 

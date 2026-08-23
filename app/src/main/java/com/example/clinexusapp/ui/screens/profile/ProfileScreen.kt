@@ -14,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -70,7 +69,7 @@ fun ProfileScreen(
         }
     }
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() } 
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -82,12 +81,12 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(bottom = padding.calculateBottomPadding())
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             WavyTealHeader(
                 title = "Profile",
                 onBack = onBack,
-                onSettingsClick = onNavigateToSettings
+                onSettingsClick = onNavigateToSettings,
             )
             
             Column(
@@ -95,7 +94,7 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
                     .offset(y = (-15).dp), // Subtly touching the wave
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Surface(
                     modifier = Modifier.size(110.dp),

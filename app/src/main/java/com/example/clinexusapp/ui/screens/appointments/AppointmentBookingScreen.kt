@@ -38,6 +38,8 @@ import com.example.clinexusapp.util.Resource
 import com.example.clinexusapp.viewmodel.BookingViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -60,16 +62,16 @@ fun SelectionCard(
                 spotColor = if (isSelected) DeepTeal.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.1f),
             ),
         shape = RoundedCornerShape(20.dp),
-        color = Color.Transparent
+        color = Color.Transparent,
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    if (isSelected) ActionButtonGradient else Brush.linearGradient(listOf(White, White))
+                    if (isSelected) ActionButtonGradient else Brush.linearGradient(listOf(White, White)),
                 )
                 .padding(12.dp),
-            contentAlignment = Alignment.CenterStart
+            contentAlignment = Alignment.CenterStart,
         ) {
             content()
         }
@@ -95,28 +97,50 @@ fun BookingSectionHeader(title: String, icon: ImageVector) {
 }
 
 @Composable
-fun BookingDateSelector(selected: String, onSelect: (String) -> Unit) {
-    val dates = listOf("MON 24", "TUE 25", "WED 26", "THU 27", "FRI 28")
+fun BookingDateSelector(
+    selected: String, 
+    enabledDays: List<String>? = null,
+    onSelect: (String) -> Unit
+) {
+    val dates = remember(enabledDays) {
+        val calendar = Calendar.getInstance()
+        val sdfDisplay = SimpleDateFormat("EEE dd", Locale.getDefault())
+        val sdfValue = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val sdfDayName = SimpleDateFormat("EEEE", Locale.US) // Full day name (e.g. "Monday")
+        
+        List(14) { // Show 14 days instead of 7 to give more options if some are disabled
+            val date = calendar.time
+            val display = sdfDisplay.format(date).uppercase()
+            val value = sdfValue.format(date)
+            val dayName = sdfDayName.format(date)
+            val isEnabled = enabledDays == null || enabledDays.any { it.equals(dayName, ignoreCase = true) }
+            
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+            DateOption(display, value, isEnabled)
+        }
+    }
+
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 24.dp)
     ) {
-        items(dates) { date ->
-            val fullDate = "2026-08-${date.split(" ").last()}"
-            val isSelected = selected == fullDate
+        items(dates) { option ->
+            val isSelected = selected == option.value
             
             Surface(
-                onClick = { onSelect(fullDate) },
+                onClick = { if (option.isEnabled) onSelect(option.value) else {} },
                 modifier = Modifier
                     .width(85.dp)
                     .height(110.dp)
+                    .alpha(if (option.isEnabled) 1f else 0.4f)
                     .shadow(
                         elevation = if (isSelected) 12.dp else 2.dp,
                         shape = RoundedCornerShape(22.dp),
                         spotColor = if (isSelected) DeepTeal.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.05f),
                     ),
                 shape = RoundedCornerShape(22.dp),
-                color = if (isSelected) VibrantTeal else White
+                color = if (isSelected) VibrantTeal else White,
+                enabled = option.isEnabled
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -124,15 +148,15 @@ fun BookingDateSelector(selected: String, onSelect: (String) -> Unit) {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = date.split(" ").first(),
-                        color = if (isSelected) White.copy(alpha = 0.8f) else SlateGray,
+                        text = option.display.split(" ").first(),
+                        color = if (isSelected) White.copy(alpha = 0.8f) else if (option.isEnabled) SlateGray else GrayMedium,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = date.split(" ").last(),
-                        color = if (isSelected) White else RoyalNavy,
+                        text = option.display.split(" ").last(),
+                        color = if (isSelected) White else if (option.isEnabled) RoyalNavy else GrayMedium,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Black
                     )
@@ -141,6 +165,8 @@ fun BookingDateSelector(selected: String, onSelect: (String) -> Unit) {
         }
     }
 }
+
+data class DateOption(val display: String, val value: String, val isEnabled: Boolean)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -264,8 +290,14 @@ fun AppointmentBookingScreen(
 
                 // Date Section
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    val scheduleState by viewModel.dentistSchedule.collectAsState()
+                    val workingDays = (scheduleState as? Resource.Success)?.data?.workingDays
+                    
                     BookingSectionHeader("Select Date", Icons.Default.Event)
-                    BookingDateSelector(selectedDate) { 
+                    BookingDateSelector(
+                        selected = selectedDate,
+                        enabledDays = workingDays
+                    ) { 
                         viewModel.checkAndFetchTimeslots(it)
                         selectedSlot = null
                     }
@@ -307,7 +339,7 @@ fun AppointmentBookingScreen(
             ) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color.Transparent
+                    color = Color.Transparent,
                 ) {
                     Box(
                         modifier = Modifier

@@ -10,6 +10,8 @@ import com.example.clinexusapp.util.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 class BookingViewModel(
     private val repository: AuthRepository,
@@ -34,8 +36,12 @@ class BookingViewModel(
     private val _availableTimeslots = MutableStateFlow<Resource<List<AvailableSlotDTO>>>(Resource.Loading())
     val availableTimeslots = _availableTimeslots.asStateFlow()
 
-    private val _selectedDate = MutableStateFlow("2026-08-20")
+    private val _dentistSchedule = MutableStateFlow<Resource<DentistScheduleDTO>?>(null)
+    val dentistSchedule = _dentistSchedule.asStateFlow()
+
+    private val _selectedDate = MutableStateFlow<String>(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
     val selectedDate = _selectedDate.asStateFlow()
+
 
     init {
         fetchDentists()
@@ -68,7 +74,15 @@ class BookingViewModel(
 
     fun selectDentist(dentist: DentistDTO) {
         _selectedDentist.value = dentist
+        fetchDentistSchedule(dentist.dentistId)
         checkAndFetchTimeslots(_selectedDate.value)
+    }
+
+    private fun fetchDentistSchedule(dentistId: Int) {
+        viewModelScope.launch {
+            _dentistSchedule.value = Resource.Loading()
+            _dentistSchedule.value = appointmentRepository.getDentistSchedule(dentistId)
+        }
     }
 
     fun toggleService(service: BookableServiceDTO) {
@@ -84,26 +98,15 @@ class BookingViewModel(
     fun checkAndFetchTimeslots(date: String) {
         _selectedDate.value = date
         val dentist = _selectedDentist.value
-
         if (dentist != null) {
             fetchTimeslots(dentist.dentistId, date)
         }
     }
 
-    private var lastFetchedDentistId: Int? = null
-    private var lastFetchedDate: String? = null
-
     private fun fetchTimeslots(dentistId: Int, date: String) {
-        if (lastFetchedDentistId == dentistId && lastFetchedDate == date) return
-
         viewModelScope.launch {
             _availableTimeslots.value = Resource.Loading()
-            val result = appointmentRepository.getAvailableTimeslots(dentistId, date)
-            _availableTimeslots.value = result
-            if (result is Resource.Success) {
-                lastFetchedDentistId = dentistId
-                lastFetchedDate = date
-            }
+            _availableTimeslots.value = appointmentRepository.getAvailableTimeslots(dentistId, date)
         }
     }
 
@@ -111,19 +114,15 @@ class BookingViewModel(
         val patientId = SessionManager.currentUser.value?.patientID
         val dentist = _selectedDentist.value
         val services = _selectedServices.value
-        
-        android.util.Log.d("BookingViewModel", "Attempting booking: patientId=$patientId, dentistId=${dentist?.dentistId}, servicesCount=${services.size}")
 
         if (patientId == null || patientId == 0) {
             _bookingState.value = Resource.Error("Error: Patient ID not found. Please log in again.")
             return
         }
-        
         if (dentist == null) {
             _bookingState.value = Resource.Error("Error: No dentist selected.")
             return
         }
-        
         if (services.isEmpty()) {
             _bookingState.value = Resource.Error("Error: Please select at least one service.")
             return
@@ -140,10 +139,8 @@ class BookingViewModel(
                 notes = "Mobile Booking",
                 selectedServices = services.map { it.serviceId }
             )
-            android.util.Log.d("BookingViewModel", "Sending request: $request")
             val result = appointmentRepository.createAppointment(request)
             _bookingState.value = result
-            android.util.Log.d("BookingViewModel", "Booking result: ${result.javaClass.simpleName}")
         }
     }
 

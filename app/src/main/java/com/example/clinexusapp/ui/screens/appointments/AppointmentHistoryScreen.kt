@@ -68,9 +68,9 @@ fun AppointmentHistoryScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { 
+                TextButton(onClick = {
                     showActionDialog = false
-                    showCancelDialog = true 
+                    showCancelDialog = true
                 }) {
                     Text("CANCEL VISIT", color = Color.Red)
                 }
@@ -205,12 +205,12 @@ fun AppointmentHistoryScreen(
                         }
                         
                         items(appointmentsList) { appointment ->
-                            val isPending = appointment.status.contains("Pending", ignoreCase = true)
-                            NeumorphicCard(modifier = Modifier.fillMaxWidth().clickable { 
+                            val isPending = appointment.appointmentStatus.contains("Pending", ignoreCase = true)
+                            NeumorphicCard(modifier = Modifier.fillMaxWidth().clickable {
                                 selectedAppointment = HistoryAppointment(
-                                    appointment.id,
+                                    appointment.appointmentId,
                                     appointment.doctor,
-                                    "${appointment.date} • ${appointment.startTime}",
+                                    "${com.example.clinexusapp.util.DateUtils.formatDisplayDate(appointment.appointmentDate)} • ${com.example.clinexusapp.util.DateUtils.formatDisplayTime(appointment.startTime)}",
                                     Icons.Default.MedicalServices,
                                     VibrantTeal
                                 )
@@ -234,7 +234,7 @@ fun AppointmentHistoryScreen(
                                             fontSize = 16.sp
                                         )
                                         Text(
-                                            text = "${appointment.date} • ${appointment.startTime}", 
+                                            text = "${com.example.clinexusapp.util.DateUtils.formatDisplayDate(appointment.appointmentDate)} • ${com.example.clinexusapp.util.DateUtils.formatDisplayTime(appointment.startTime)}", 
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), 
                                             fontSize = 13.sp
                                         )
@@ -245,7 +245,7 @@ fun AppointmentHistoryScreen(
                                                 modifier = Modifier.padding(top = 4.dp)
                                             ) {
                                                 Text(
-                                                    text = appointment.status.uppercase(), 
+                                                    text = appointment.appointmentStatus.uppercase(), 
                                                     fontSize = 9.sp, 
                                                     fontWeight = FontWeight.Black,
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),

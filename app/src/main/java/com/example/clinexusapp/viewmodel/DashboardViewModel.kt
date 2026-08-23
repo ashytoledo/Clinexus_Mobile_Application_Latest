@@ -55,18 +55,21 @@ class DashboardViewModel(
                     // Filter: Not cancelled and in the future (or today)
                     // Sort: Closest to current time
                     val next = result.data
-                        .filter { it.status.lowercase() != "cancelled" }
+                        .filter { it.appointmentStatus.lowercase() != "cancelled" }
                         .sortedBy { 
                             try {
-                                sdf.parse("${it.date} ${it.startTime}")
+                                val cleanDate = it.appointmentDate.substringBefore("T")
+                                sdf.parse("$cleanDate ${it.startTime}")
                             } catch (_: Exception) {
                                 null
                             }
                         }
                         .firstOrNull { 
                             try {
-                                val apptDate = sdf.parse("${it.date} ${it.startTime}")
-                                apptDate?.after(now) == true || it.date == SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
+                                val cleanDate = it.appointmentDate.substringBefore("T")
+                                val apptDate = sdf.parse("$cleanDate ${it.startTime}")
+                                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
+                                apptDate?.after(now) == true || cleanDate == todayStr
                             } catch (_: Exception) {
                                 false
                             }
