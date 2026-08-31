@@ -10,15 +10,18 @@ import com.example.clinexusapp.util.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MultipartBody
 
 class ProfileViewModel(
     private val repository: AuthRepository,
     private val addressRepository: AddressRepository? = null
 ) : ViewModel() {
 
+    // Update state
     private val _updateState = MutableStateFlow<Resource<GenericResponse>?>(null)
     val updateState = _updateState.asStateFlow()
 
+    // Address dropdown data
     private val _regions = MutableStateFlow<List<Region>>(emptyList())
     val regions = _regions.asStateFlow()
 
@@ -35,10 +38,13 @@ class ProfileViewModel(
         loadRegions()
     }
 
+    // ---------- Address Helpers ----------
     private fun loadRegions() {
         viewModelScope.launch {
             addressRepository?.getRegions()?.let { result ->
-                if (result is Resource.Success) _regions.value = result.data ?: emptyList()
+                if (result is Resource.Success) {
+                    _regions.value = result.data ?: emptyList()
+                }
             }
         }
     }
@@ -49,7 +55,9 @@ class ProfileViewModel(
             _cities.value = emptyList()
             _barangays.value = emptyList()
             addressRepository?.getProvinces(regionCode)?.let { result ->
-                if (result is Resource.Success) _provinces.value = result.data ?: emptyList()
+                if (result is Resource.Success) {
+                    _provinces.value = result.data ?: emptyList()
+                }
             }
         }
     }
@@ -59,7 +67,9 @@ class ProfileViewModel(
             _cities.value = emptyList()
             _barangays.value = emptyList()
             addressRepository?.getCities(provinceCode)?.let { result ->
-                if (result is Resource.Success) _cities.value = result.data ?: emptyList()
+                if (result is Resource.Success) {
+                    _cities.value = result.data ?: emptyList()
+                }
             }
         }
     }
@@ -68,47 +78,76 @@ class ProfileViewModel(
         viewModelScope.launch {
             _barangays.value = emptyList()
             addressRepository?.getBarangays(cityCode)?.let { result ->
-                if (result is Resource.Success) _barangays.value = result.data ?: emptyList()
+                if (result is Resource.Success) {
+                    _barangays.value = result.data ?: emptyList()
+                }
             }
         }
     }
 
-    fun updateProfile(firstName: String, lastName: String, email: String) {
+    // ---------- Update Profile ----------
+
+    fun updateProfile(
+        firstName: String,
+        lastName: String,
+        email: String
+    ) {
         viewModelScope.launch {
-            _updateState.value = Resource.Loading()
-            val user = SessionManager.currentUser.value
+            val currentUser = SessionManager.currentUser.value
+
+            if (currentUser == null) {
+                _updateState.value = Resource.Error("User profile not found")
+                return@launch
+            }
+
             val request = UpdateProfileRequest(
-                firstName = firstName,
-                middleName = user?.middleName,
-                lastName = lastName,
-                phoneNumber = user?.phoneNumber ?: "",
-                dateOfBirth = user?.dateOfBirth ?: "",
-                streetAddress = user?.streetAddress ?: "",
-                province = user?.province ?: "",
-                city = user?.city ?: "",
-                barangay = user?.barangay ?: ""
+                email = email.trim(),
+                firstName = firstName.trim(),
+                middleName = currentUser.middleName,
+                lastName = lastName.trim(),
+                phoneNumber = currentUser.phoneNumber ?: "",
+                dateOfBirth = currentUser.dateOfBirth ?: "",
+                streetAddress = currentUser.streetAddress ?: "",
+                province = currentUser.province ?: "",
+                city = currentUser.city ?: "",
+                barangay = currentUser.barangay ?: ""
             )
+
+            _updateState.value = Resource.Loading()
+
             val result = repository.updatePatientProfile(request)
-            if (result is Resource.Success) refreshProfile()
+
+            if (result is Resource.Success) {
+                refreshProfile()
+            }
+
             _updateState.value = result
         }
     }
 
-    fun updateFullProfile(request: UpdateProfileRequest) {
+    fun updateFullProfile(
+        request: UpdateProfileRequest,
+        profileImage: MultipartBody.Part? = null
+    ) {
         viewModelScope.launch {
             _updateState.value = Resource.Loading()
-            val result = repository.updatePatientProfile(request)
-            if (result is Resource.Success) refreshProfile()
+            val result = repository.updatePatientProfile(request, profileImage)
+
+            if (result is Resource.Success) {
+                refreshProfile()
+            }
+
             _updateState.value = result
         }
     }
+
+// ---------- Fetch Profile ----------
 
     fun fetchProfile() {
         viewModelScope.launch {
             refreshProfile()
         }
     }
-
     private suspend fun refreshProfile() {
         repository.getPatientProfile().let { result ->
             if (result is Resource.Success) {

@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.example.clinexusapp.ui.components.*
 import com.example.clinexusapp.ui.theme.*
 import com.example.clinexusapp.util.SessionManager
@@ -28,8 +30,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
-    onLogout: () -> Unit, 
-    onBack: () -> Unit, 
+    onLogout: () -> Unit,
+    onBack: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToPersonalInformation: () -> Unit,
     onNavigateToHistory: () -> Unit,
@@ -37,7 +39,7 @@ fun ProfileScreen(
 ) {
     val user by SessionManager.currentUser.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
-    
+
     // Auto-fetch if names are missing
     LaunchedEffect(user) {
         if ((user != null) && (user?.firstName == null)) {
@@ -53,7 +55,7 @@ fun ProfileScreen(
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    
+
     LaunchedEffect(user) {
         if (!isEditing) {
             firstName = user?.firstName ?: ""
@@ -61,7 +63,7 @@ fun ProfileScreen(
             email = user?.email ?: ""
         }
     }
-    
+
     LaunchedEffect(updateState) {
         if (updateState is Resource.Success) {
             isEditing = false
@@ -69,7 +71,7 @@ fun ProfileScreen(
         }
     }
 
-    val snackbarHostState = remember { SnackbarHostState() } 
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -88,7 +90,7 @@ fun ProfileScreen(
                 onBack = onBack,
                 onSettingsClick = onNavigateToSettings,
             )
-            
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -104,12 +106,26 @@ fun ProfileScreen(
                     border = androidx.compose.foundation.BorderStroke(4.dp, MaterialTheme.colorScheme.surface)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Person, null, modifier = Modifier.size(70.dp), tint = MaterialTheme.colorScheme.primary)
+                        if (!user?.profilePicture.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = user?.profilePicture,
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                null,
+                                modifier = Modifier.size(70.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 NeumorphicCard(modifier = Modifier.fillMaxWidth()) {
                     if (isEditing) {
                         MintTextField(value = firstName, onValueChange = { firstName = it }, label = "First Name", icon = Icons.Default.Badge)
@@ -129,8 +145,8 @@ fun ProfileScreen(
                                 Icon(Icons.Default.Verified, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "VERIFIED PATIENT", 
-                                    fontSize = 11.sp, 
+                                    text = "VERIFIED PATIENT",
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
                                     color = MaterialTheme.colorScheme.primary,
                                     letterSpacing = 1.sp
@@ -139,26 +155,26 @@ fun ProfileScreen(
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(20.dp))
-                
+
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     ProfileMenuItem(
-                        title = "Personal Information", 
+                        title = "Personal Information",
                         icon = Icons.Default.PersonOutline,
                         iconColor = Color(0xFF00C9B1),
                         iconBg = Color(0xFFE0F7F4),
                         onClick = onNavigateToPersonalInformation
                     )
                     ProfileMenuItem(
-                        title = "My Appointments", 
+                        title = "My Appointments",
                         icon = Icons.AutoMirrored.Filled.EventNote,
                         iconColor = DeepTeal,
                         iconBg = MintSparkle,
                         onClick = onNavigateToHistory
                     )
                     ProfileMenuItem(
-                        title = "Medical Records", 
+                        title = "Medical Records",
                         icon = Icons.Default.MedicalInformation,
                         iconColor = Color(0xFF0288D1),
                         iconBg = Color(0xFFE1F5FE)
@@ -166,7 +182,7 @@ fun ProfileScreen(
                         scope.launch { snackbarHostState.showSnackbar("ACCESSING: Clinical Records") }
                     }
                     ProfileMenuItem(
-                        title = "Change Password", 
+                        title = "Change Password",
                         icon = Icons.Default.LockOpen,
                         iconColor = Color(0xFF64748B),
                         iconBg = Color(0xFFF1F5F9)
@@ -174,11 +190,11 @@ fun ProfileScreen(
                         scope.launch { snackbarHostState.showSnackbar("REDIRECTING: Security Protocol") }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(36.dp))
                 VibrantButton(
                     text = if (isEditing) (if (updateState is Resource.Loading) "Saving..." else "Save Profile") else "Edit Profile",
-                    onClick = { 
+                    onClick = {
                         if (isEditing) {
                             viewModel.updateProfile(firstName, lastName, email)
                         } else {
@@ -187,7 +203,7 @@ fun ProfileScreen(
                     },
                     enabled = updateState !is Resource.Loading
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
                 TextButton(onClick = onLogout) {
                     Text(text = "Log Out", color = ErrorRed, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -211,10 +227,10 @@ fun ProfileMenuItem(title: String, icon: ImageVector, iconColor: Color, iconBg: 
             }
             Spacer(modifier = Modifier.width(18.dp))
             Text(
-                text = title, 
-                modifier = Modifier.weight(1f), 
-                fontWeight = FontWeight.Bold, 
-                color = MaterialTheme.colorScheme.onSurface, 
+                text = title,
+                modifier = Modifier.weight(1f),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp
             )
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(22.dp))

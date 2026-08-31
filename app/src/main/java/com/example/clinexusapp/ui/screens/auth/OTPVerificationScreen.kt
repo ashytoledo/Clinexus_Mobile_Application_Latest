@@ -29,7 +29,8 @@ import com.example.clinexusapp.viewmodel.OTPViewModel
 fun OTPVerificationScreen(
     email: String,
     viewModel: OTPViewModel,
-    onVerifySuccess: () -> Unit
+    isPasswordReset: Boolean = false,
+    onVerifySuccess: (String?) -> Unit
 ) {
     val otpValues = remember { mutableStateListOf("", "", "", "", "", "") }
     val focusRequesters = remember { List(6) { FocusRequester() } }
@@ -39,7 +40,7 @@ fun OTPVerificationScreen(
 
     LaunchedEffect(otpState) {
         if (otpState is Resource.Success) {
-            onVerifySuccess()
+            onVerifySuccess(otpState?.data?.resetToken)
             viewModel.resetState()
         } else if (otpState is Resource.Error) {
             snackbarHostState.showSnackbar(otpState?.message ?: "Verification failed")
@@ -59,7 +60,7 @@ fun OTPVerificationScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Verify Email",
+                text = if (isPasswordReset) "OTP Verification" else "Verify Email",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.primary,
@@ -109,7 +110,7 @@ fun OTPVerificationScreen(
                 text = if (otpState is Resource.Loading) "Verifying..." else "Verify",
                 onClick = { 
                     val fullOtp = otpValues.joinToString("")
-                    viewModel.verifyOtp(email, fullOtp) 
+                    viewModel.verifyOtp(email, fullOtp, isPasswordReset) 
                 },
                 enabled = otpValues.all { it.isNotEmpty() } && otpState !is Resource.Loading
             )

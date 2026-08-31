@@ -3,11 +3,7 @@ package com.example.clinexusapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.clinexusapp.api.AuthRepository
-import com.example.clinexusapp.model.ChatMessageDTO
-import com.example.clinexusapp.model.ContactDTO
-import com.example.clinexusapp.model.ConversationDTO
-import com.example.clinexusapp.model.ConversationMessagesResponse
-import com.example.clinexusapp.model.SendMessageResponse
+import com.example.clinexusapp.model.*
 import com.example.clinexusapp.util.Resource
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -17,6 +13,7 @@ import kotlinx.coroutines.launch
 
 class ChatViewModel(private val repository: AuthRepository) : ViewModel() {
 
+    // ---- States ----
     private val _chatState = MutableStateFlow<Resource<List<ChatMessageDTO>>>(Resource.Loading())
     val chatState = _chatState.asStateFlow()
 
@@ -26,7 +23,8 @@ class ChatViewModel(private val repository: AuthRepository) : ViewModel() {
     private val _conversationsState = MutableStateFlow<Resource<List<ConversationDTO>>>(Resource.Loading())
     val conversationsState = _conversationsState.asStateFlow()
 
-    private val _conversationMessagesState = MutableStateFlow<Resource<ConversationMessagesResponse>>(Resource.Loading())
+    private val _conversationMessagesState =
+        MutableStateFlow<Resource<ConversationMessagesResponse>>(Resource.Loading())
     val conversationMessagesState = _conversationMessagesState.asStateFlow()
 
     private val _sendMessageState = MutableStateFlow<Resource<SendMessageResponse>?>(null)
@@ -38,6 +36,7 @@ class ChatViewModel(private val repository: AuthRepository) : ViewModel() {
     private val _selectedContact = MutableStateFlow<ContactDTO?>(null)
     val selectedContact = _selectedContact.asStateFlow()
 
+    // Internal tracking
     private var lastMarkedReadId: Int? = null
     private var pollingJob: Job? = null
 
@@ -45,6 +44,8 @@ class ChatViewModel(private val repository: AuthRepository) : ViewModel() {
         fetchConversations()
         fetchContacts()
     }
+
+    // ---- Public actions ----
 
     fun selectConversation(conversation: ConversationDTO?) {
         _selectedConversation.value = conversation
@@ -88,10 +89,11 @@ class ChatViewModel(private val repository: AuthRepository) : ViewModel() {
     fun fetchConversationMessages(conversationID: Int, silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) {
-                lastMarkedReadId = null // Reset tracking for new conversation
+                lastMarkedReadId = null
                 _conversationMessagesState.value = Resource.Loading()
             }
             val result = repository.getConversationMessages(conversationID)
+            // Only update state if it's a success or we are not in silent mode
             if (result is Resource.Success || !silent) {
                 _conversationMessagesState.value = result
             }
@@ -118,24 +120,29 @@ class ChatViewModel(private val repository: AuthRepository) : ViewModel() {
             _sendMessageState.value = Resource.Loading()
             val result = repository.sendMessage(receiverAccountType, receiverAccountID, messageContent)
             _sendMessageState.value = result
-            
+
             if (result is Resource.Success) {
                 if (conversationID != null) {
+                    // Refresh messages for existing conversation
                     fetchConversationMessages(conversationID)
                 } else {
-                    // New chat: Refresh conversation list to find the new ID
+                    // New conversation: refresh list to find new conversation ID
                     val convResult = repository.getConversations()
                     if (convResult is Resource.Success) {
                         _conversationsState.value = convResult
-                        val newConv = convResult.data?.find { 
-                            it.account_type == receiverAccountType && it.account_id == receiverAccountID 
+                        // Find the conversation with the receiver
+                        val newConv = convResult.data?.find {
+                            it.account_type == receiverAccountType && it.account_id == receiverAccountID
                         }
                         if (newConv != null) {
                             selectConversation(newConv)
                         } else {
-                            // If still not found, just refresh conversations to be safe
+                            // If not found, just refresh conversations
                             fetchConversations()
                         }
+                    } else {
+                        // If getting conversations fails, still refresh the list
+                        fetchConversations()
                     }
                 }
             }
@@ -144,7 +151,7 @@ class ChatViewModel(private val repository: AuthRepository) : ViewModel() {
 
     fun markConversationAsRead(conversationID: Int, lastMessageId: Int) {
         if (lastMarkedReadId == lastMessageId) return // Already marked
-        
+
         viewModelScope.launch {
             val result = repository.markConversationAsRead(conversationID, lastMessageId)
             if (result is Resource.Success) {

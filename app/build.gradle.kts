@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.coil.compose)
 
     // Retrofit + Gson + OkHttp
     implementation(libs.retrofit)

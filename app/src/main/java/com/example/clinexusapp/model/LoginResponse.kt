@@ -10,8 +10,8 @@ data class LoginResponse(
 )
 
 data class PatientInfo(
-    @SerializedName("account_id") val accountID: Int,
-    @SerializedName("patient_id") val patientID: Int,
+    @SerializedName(value = "account_id", alternate = ["accountID"]) val accountID: Int,
+    @SerializedName(value = "patient_id", alternate = ["patientID"]) val patientID: Int,
     val role: String,
     val email: String? = null,
     @SerializedName("first_name") val firstName: String? = null,
@@ -22,5 +22,6 @@ data class PatientInfo(
     @SerializedName("street_address") val streetAddress: String? = null,
     @SerializedName("province") val province: String? = null,
     @SerializedName("city") val city: String? = null,
-    @SerializedName("barangay") val barangay: String? = null
+    @SerializedName("barangay") val barangay: String? = null,
+    @SerializedName("profile_image") val profilePicture: String? = null
 )

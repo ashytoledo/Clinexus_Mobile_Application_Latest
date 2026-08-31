@@ -9,6 +9,7 @@ import com.example.clinexusapp.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MultipartBody
 
 class RegisterViewModel(
     private val repository: AuthRepository,
@@ -92,13 +93,25 @@ class RegisterViewModel(
         streetAddress: String,
         province: String,
         city: String,
-        barangay: String
+        barangay: String,
+        profileImage: MultipartBody.Part? = null
     ) {
-        if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || 
-            password.isEmpty() || phoneNumber.isEmpty() || dateOfBirth.isEmpty() ||
-            streetAddress.isEmpty() || province.isEmpty() || city.isEmpty() || barangay.isEmpty()
-        ) {
-            _validationError.value = "Please fill in all required fields"
+        val missingField = when {
+            firstName.isEmpty() -> "First Name"
+            lastName.isEmpty() -> "Last Name"
+            email.isEmpty() -> "Email Address"
+            password.isEmpty() -> "Password"
+            phoneNumber.isEmpty() -> "Phone Number"
+            dateOfBirth.isEmpty() -> "Date of Birth"
+            streetAddress.isEmpty() -> "Street Address"
+            province.isEmpty() -> "Province"
+            city.isEmpty() -> "City"
+            barangay.isEmpty() -> "Barangay"
+            else -> null
+        }
+
+        if (missingField != null) {
+            _validationError.value = "$missingField is required"
             return
         }
 
@@ -124,7 +137,7 @@ class RegisterViewModel(
                 email, password, firstName, middleName, lastName, phoneNumber, dateOfBirth,
                 streetAddress, province, city, barangay
             )
-            _registerState.value = repository.register(request)
+            _registerState.value = repository.register(request, profileImage)
         }
     }
 

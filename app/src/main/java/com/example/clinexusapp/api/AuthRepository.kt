@@ -1,20 +1,31 @@
 package com.example.clinexusapp.api
 
+import android.util.Log
 import com.example.clinexusapp.model.*
 import com.example.clinexusapp.util.Resource
 import com.example.clinexusapp.util.SessionManager
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import java.io.IOException
 
 class AuthRepository(private val apiService: ApiService) {
 
+    // Helper to convert String to RequestBody for multipart
+    private fun String.toPart(): RequestBody =
+        this.toRequestBody("text/plain".toMediaTypeOrNull())
+
+    // ---------- LOGIN ----------
     suspend fun login(request: LoginRequest): Resource<LoginResponse> {
         return try {
             val response = apiService.loginPatient(request)
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "An unknown error occurred")
+                val errorMsg = parseError(response.errorBody()?.string())
+                Resource.Error(errorMsg ?: "Invalid Credentials")
             }
         } catch (e: IOException) {
             Resource.Error("Could not connect to server. Check your internet connection.")
@@ -25,84 +36,150 @@ class AuthRepository(private val apiService: ApiService) {
         }
     }
 
-    suspend fun register(request: RegisterRequest): Resource<RegisterResponse> {
+    // ---------- REGISTER ----------
+    suspend fun register(request: RegisterRequest, file: MultipartBody.Part? = null): Resource<RegisterResponse> {
         return try {
-            val response = apiService.registerPatient(request)
-            if (response.isSuccessful && (response.body() != null)) {
+            val middleNamePart = if (request.middleName.isNullOrBlank()) null else request.middleName.toPart()
+
+            val response = apiService.registerPatient(
+                email = request.email.toPart(),
+                password = request.password.toPart(),
+                firstName = request.firstName.toPart(),
+                middleName = middleNamePart,
+                lastName = request.lastName.toPart(),
+                phoneNumber = request.phoneNumber.toPart(),
+                dateOfBirth = request.dateOfBirth.toPart(),
+                streetAddress = request.streetAddress.toPart(),
+                province = request.province.toPart(),
+                city = request.city.toPart(),
+                barangay = request.barangay.toPart(),
+                file = file
+            )
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "An unknown error occurred")
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "Registration failed")
             }
         } catch (e: IOException) {
-            Resource.Error("Could not connect to server. Check your internet connection.")
+            Resource.Error("Network error: ${e.message}")
         } catch (_: HttpException) {
-            Resource.Error("Server returned an error. Please try again later.")
+            Resource.Error("Server error. Please try again later.")
         } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
+            Resource.Error(e.message ?: "Unexpected error")
         }
     }
 
+    // ---------- VERIFY EMAIL ----------
     suspend fun verifyEmail(email: String, otp: String): Resource<GenericResponse> {
         return try {
             val request = VerifyOtpRequest(email, otp)
             val response = apiService.verifyEmail(request)
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "OTP verification failed")
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "An unexpected error occurred")
         }
     }
 
+    // ---------- VERIFY OTP (for password reset) ----------
+    suspend fun verifyOTP(email: String, otp: String): Resource<GenericResponse> {
+        return try {
+            val request = VerifyOtpRequest(email, otp)
+            val response = apiService.verifyOTP(request)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "An unexpected error occurred")
+        }
+    }
+
+    // ---------- FORGOT PASSWORD ----------
     suspend fun forgotPassword(email: String): Resource<GenericResponse> {
         return try {
             val request = ForgotPasswordRequest(email)
             val response = apiService.forgotPassword(request)
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Password reset request failed")
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "Password reset request failed")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "An unexpected error occurred")
         }
     }
 
-    suspend fun resetPassword(email: String, otp: String, newPassword: String): Resource<GenericResponse> {
+    // ---------- RESET PASSWORD ----------
+    suspend fun resetPassword(resetToken: String, newPassword: String): Resource<GenericResponse> {
         return try {
-            val request = ResetPasswordRequest(email, otp, newPassword)
+            val request = ResetPasswordRequest(resetToken, newPassword)
             val response = apiService.resetPassword(request)
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Password reset failed")
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "Password reset failed")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "An unexpected error occurred")
         }
     }
 
-    suspend fun getAppointmentHistory(): Resource<List<AppointmentDTO>> {
+    // ---------- PASSWORD CHANGE (authenticated) ----------
+    suspend fun requestPasswordChange(): Resource<GenericResponse> {
         return try {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getAppointmentHistory("Bearer $token")
-            if (response.isSuccessful && (response.body() != null)) {
+            val response = apiService.requestPasswordChange("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch history")
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "Password change request failed")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "An unexpected error occurred")
         }
     }
 
+    suspend fun verifyPasswordChangeOTP(otp: String): Resource<GenericResponse> {
+        return try {
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val request = VerifyPasswordChangeOtpRequest(otp)
+            val response = apiService.verifyPasswordChangeOTP("Bearer $token", request)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "An unexpected error occurred")
+        }
+    }
+
+    suspend fun changePassword(newPassword: String): Resource<GenericResponse> {
+        return try {
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val request = ChangePasswordRequest(newPassword)
+            val response = apiService.changePatientPassword("Bearer $token", request)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "Password change failed")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "An unexpected error occurred")
+        }
+    }
+
+    // ---------- PROFILE ----------
     suspend fun getPatientProfile(): Resource<PatientInfo> {
         return try {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
             val response = apiService.getPatientProfile("Bearer $token")
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
                 Resource.Error(response.errorBody()?.string() ?: "Failed to fetch profile")
@@ -112,17 +189,104 @@ class AuthRepository(private val apiService: ApiService) {
         }
     }
 
-    suspend fun updatePatientProfile(request: UpdateProfileRequest): Resource<GenericResponse> {
+    suspend fun updatePatientProfile(
+        request: UpdateProfileRequest,
+        file: MultipartBody.Part? = null
+    ): Resource<GenericResponse> {
         return try {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.updatePatientProfile("Bearer $token", request)
-            if (response.isSuccessful && (response.body() != null)) {
+
+            // Sanitize inputs
+            val cleanPhone = request.phoneNumber.replace(Regex("[^0-9]"), "")
+            val cleanDate = request.dateOfBirth.trim()
+            val middlePart = if (request.middleName.isNullOrBlank()) "-".toPart() else request.middleName.toPart()
+
+            if (!cleanDate.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))) {
+                return Resource.Error("Date of birth must be in YYYY-MM-DD format")
+            }
+            if (cleanPhone.length < 10) {
+                return Resource.Error("Phone number must have at least 10 digits")
+            }
+
+            Log.d("AuthRepository", "Updating profile for: ${request.email}")
+            Log.d("AuthRepository", "Date: $cleanDate, Phone: $cleanPhone")
+
+            val response = apiService.updatePatientAccount(
+                token = "Bearer $token",
+                email = request.email.toPart(),
+                firstName = request.firstName.toPart(),
+                middleName = middlePart,
+                lastName = request.lastName.toPart(),
+                phoneNumber = cleanPhone.toPart(),
+                dateOfBirth = cleanDate.toPart(),
+                streetAddress = request.streetAddress.toPart(),
+                province = request.province.toPart(),
+                city = request.city.toPart(),
+                barangay = request.barangay.toPart(),
+                file = file
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                Log.d("AuthRepository", "Profile update successful")
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to update profile")
+                val errorBody = response.errorBody()?.string()
+                Log.e("AuthRepository", "Update failed: HTTP ${response.code()}, body: $errorBody")
+                Resource.Error(parseError(errorBody) ?: "Failed to update profile")
+            }
+        } catch (e: IOException) {
+            Log.e("AuthRepository", "Network error", e)
+            Resource.Error("Network error: ${e.message}")
+        } catch (e: HttpException) {
+            Log.e("AuthRepository", "Server error", e)
+            Resource.Error("Server error: ${e.message}")
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "Unexpected error", e)
+            Resource.Error("Unexpected error: ${e.message}")
+        }
+    }
+
+    // ---------- APPOINTMENTS ----------
+    suspend fun getAppointmentHistory(): Resource<List<AppointmentDTO>> {
+        return try {
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val response = apiService.getAppointmentHistory("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch history")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "An unexpected error occurred")
+        }
+    }
+
+    // ---------- CHAT ----------
+    suspend fun getConversations(): Resource<List<ConversationDTO>> {
+        return try {
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val response = apiService.getConversations("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch conversations")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unexpected error")
+        }
+    }
+
+    suspend fun getAvailableContacts(): Resource<List<ContactDTO>> {
+        return try {
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val response = apiService.getAvailableContacts("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch contacts")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unexpected error")
         }
     }
 
@@ -130,113 +294,98 @@ class AuthRepository(private val apiService: ApiService) {
         return try {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
             val response = apiService.getChatMessages("Bearer $token")
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch messages")
+                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch chat messages")
             }
         } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
-        }
-    }
-
-    suspend fun getClinicNews(): Resource<List<ClinicNewsDTO>> {
-        return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getClinicNews("Bearer $token")
-            if (response.isSuccessful && (response.body() != null)) {
-                Resource.Success(response.body()!!)
-            } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch news")
-            }
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
-        }
-    }
-
-    suspend fun getHealthInsights(): Resource<List<HealthInsightDTO>> {
-        return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getHealthInsights("Bearer $token")
-            if (response.isSuccessful && (response.body() != null)) {
-                Resource.Success(response.body()!!)
-            } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch insights")
-            }
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
-        }
-    }
-
-    suspend fun getAvailableContacts(): Resource<List<ContactDTO>> {
-        return try {
-            val token = SessionManager.token ?: return Resource.Error<List<ContactDTO>>("Not authenticated")
-            val response = apiService.getAvailableContacts("Bearer $token")
-            if (response.isSuccessful && (response.body() != null)) {
-                Resource.Success(response.body()!!)
-            } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch contacts")
-            }
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
-        }
-    }
-
-    suspend fun getConversations(): Resource<List<ConversationDTO>> {
-        return try {
-            val token = SessionManager.token ?: return Resource.Error<List<ConversationDTO>>("Not authenticated")
-            val response = apiService.getConversations("Bearer $token")
-            if (response.isSuccessful && (response.body() != null)) {
-                Resource.Success(response.body()!!)
-            } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch conversations")
-            }
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
+            Resource.Error(e.message ?: "Unexpected error")
         }
     }
 
     suspend fun getConversationMessages(conversationID: Int): Resource<ConversationMessagesResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error<ConversationMessagesResponse>("Not authenticated")
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
             val response = apiService.getConversationMessages("Bearer $token", conversationID)
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch messages")
+                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch conversation messages")
             }
         } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
+            Resource.Error(e.message ?: "Unexpected error")
         }
     }
 
     suspend fun sendMessage(receiverAccountType: String, receiverAccountID: Int, messageContent: String): Resource<SendMessageResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error<SendMessageResponse>("Not authenticated")
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
             val request = SendMessageRequest(receiverAccountType, receiverAccountID, messageContent)
             val response = apiService.sendMessage("Bearer $token", request)
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
                 Resource.Error(response.errorBody()?.string() ?: "Failed to send message")
             }
         } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
+            Resource.Error(e.message ?: "Unexpected error")
         }
     }
 
-    suspend fun markConversationAsRead(conversationID: Int, lastReadMessageID: Int): Resource<GenericResponse> {
+    suspend fun markConversationAsRead(conversationID: Int, lastMessageId: Int): Resource<GenericResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error<GenericResponse>("Not authenticated")
-            val request = MarkReadRequest(lastReadMessageID)
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val request = MarkReadRequest(lastMessageId)
             val response = apiService.markConversationAsRead("Bearer $token", conversationID, request)
-            if (response.isSuccessful && (response.body() != null)) {
+            if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
                 Resource.Error(response.errorBody()?.string() ?: "Failed to mark as read")
             }
         } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
+            Resource.Error(e.message ?: "Unexpected error")
+        }
+    }
+
+    // ---------- CLINIC NEWS ----------
+    suspend fun getClinicNews(): Resource<List<ClinicNewsDTO>> {
+        return try {
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val response = apiService.getClinicNews("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch clinic news")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unexpected error")
+        }
+    }
+
+    // ---------- HEALTH INSIGHTS ----------
+    suspend fun getHealthInsights(): Resource<List<HealthInsightDTO>> {
+        return try {
+            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val response = apiService.getHealthInsights("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(response.errorBody()?.string() ?: "Failed to fetch health insights")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unexpected error")
+        }
+    }
+
+    // ---------- HELPER ----------
+    private fun parseError(errorJson: String?): String? {
+        return try {
+            val gson = com.google.gson.Gson()
+            val errorBody = gson.fromJson(errorJson, GenericResponse::class.java)
+            errorBody.message
+        } catch (e: Exception) {
+            null
         }
     }
 }

@@ -14,10 +14,14 @@ class OTPViewModel(private val repository: AuthRepository) : ViewModel() {
     private val _otpState = MutableStateFlow<Resource<GenericResponse>?>(null)
     val otpState = _otpState.asStateFlow()
 
-    fun verifyOtp(email: String, otp: String) {
+    fun verifyOtp(email: String, otp: String, isPasswordReset: Boolean = false) {
         viewModelScope.launch {
             _otpState.value = Resource.Loading()
-            _otpState.value = repository.verifyEmail(email, otp)
+            if (isPasswordReset) {
+                _otpState.value = repository.verifyOTP(email, otp)
+            } else {
+                _otpState.value = repository.verifyEmail(email, otp)
+            }
         }
     }
 
@@ -28,10 +32,10 @@ class OTPViewModel(private val repository: AuthRepository) : ViewModel() {
         }
     }
 
-    fun resetPassword(email: String, otp: String, newPassword: String) {
+    fun resetPassword(resetToken: String, newPassword: String) {
         viewModelScope.launch {
             _otpState.value = Resource.Loading()
-            _otpState.value = repository.resetPassword(email, otp, newPassword)
+            _otpState.value = repository.resetPassword(resetToken, newPassword)
         }
     }
 

@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.clinexusapp.ui.components.ElegantTextField
@@ -18,11 +19,10 @@ import com.example.clinexusapp.viewmodel.OTPViewModel
 
 @Composable
 fun ResetPasswordScreen(
-    email: String,
+    resetToken: String,
     viewModel: OTPViewModel,
     onResetSuccess: () -> Unit
 ) {
-    var otpCode by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     val otpState by viewModel.otpState.collectAsState()
@@ -55,11 +55,16 @@ fun ResetPasswordScreen(
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.primary
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Set a strong password to secure your account.",
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center
+            )
             Spacer(modifier = Modifier.height(48.dp))
 
             ElegantCard {
-                ElegantTextField(value = otpCode, onValueChange = { otpCode = it }, label = "OTP Code", icon = Icons.Default.Pin)
-                Spacer(modifier = Modifier.height(16.dp))
                 ElegantTextField(value = newPassword, onValueChange = { newPassword = it }, label = "New Password", icon = Icons.Default.Lock, isPassword = true)
                 Spacer(modifier = Modifier.height(16.dp))
                 ElegantTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = "Confirm Password", icon = Icons.Default.LockReset, isPassword = true)
@@ -71,12 +76,12 @@ fun ResetPasswordScreen(
                 text = if (otpState is Resource.Loading) "Resetting..." else "Reset Password",
                 onClick = {
                     if (newPassword == confirmPassword) {
-                        viewModel.resetPassword(email, otpCode, newPassword)
+                        viewModel.resetPassword(resetToken, newPassword)
                     } else {
-                        // Show error
+                        // In a real app, use snackbar
                     }
                 },
-                enabled = otpCode.isNotEmpty() && newPassword.isNotEmpty() && otpState !is Resource.Loading
+                enabled = newPassword.isNotEmpty() && newPassword == confirmPassword && otpState !is Resource.Loading
             )
         }
     }

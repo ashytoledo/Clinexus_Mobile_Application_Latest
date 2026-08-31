@@ -85,7 +85,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
             RegisterScreen(
                 viewModel = registerViewModel,
                 onRegisterSuccess = { email ->
-                    navController.navigate(Screen.OTP.createRoute(email))
+                    navController.navigate(Screen.OTP.createRoute(email, "verification"))
                 },
                 onNavigateToLogin = {
                     navController.popBackStack()
@@ -94,16 +94,25 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         }
         composable(
             route = Screen.OTP.route,
-            arguments = listOf(navArgument("email") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("email") { type = NavType.StringType },
+                navArgument("purpose") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val email = backStackEntry.arguments?.getString("email") ?: ""
+            val purpose = backStackEntry.arguments?.getString("purpose") ?: "verification"
             val otpViewModel: OTPViewModel = viewModel(factory = factory)
             OTPVerificationScreen(
                 email = email,
                 viewModel = otpViewModel,
-                onVerifySuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                isPasswordReset = purpose == "reset",
+                onVerifySuccess = { resetToken ->
+                    if (purpose == "reset") {
+                        navController.navigate(Screen.ResetPassword.createRoute(resetToken ?: ""))
+                    } else {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -113,7 +122,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
             ForgotPasswordScreen(
                 viewModel = otpViewModel,
                 onNavigateToReset = { email ->
-                    navController.navigate(Screen.ResetPassword.createRoute(email))
+                    navController.navigate(Screen.OTP.createRoute(email, "reset"))
                 },
                 onNavigateBack = {
                     navController.popBackStack()
@@ -122,12 +131,12 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         }
         composable(
             route = Screen.ResetPassword.route,
-            arguments = listOf(navArgument("email") { type = NavType.StringType })
+            arguments = listOf(navArgument("resetToken") { type = NavType.StringType })
         ) { backStackEntry ->
-            val email = backStackEntry.arguments?.getString("email") ?: ""
+            val resetToken = backStackEntry.arguments?.getString("resetToken") ?: ""
             val otpViewModel: OTPViewModel = viewModel(factory = factory)
             ResetPasswordScreen(
-                email = email,
+                resetToken = resetToken,
                 viewModel = otpViewModel,
                 onResetSuccess = {
                     navController.navigate(Screen.Login.route) {

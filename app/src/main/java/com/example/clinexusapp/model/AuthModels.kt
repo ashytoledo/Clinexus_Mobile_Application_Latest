@@ -12,17 +12,29 @@ data class ForgotPasswordRequest(
 )
 
 data class ResetPasswordRequest(
-    val email: String,
-    val otp: String,
+    val resetToken: String,
     val newPassword: String
 )
 
 data class GenericResponse(
-    val success: Boolean,
-    val message: String
+    val success: Boolean? = null,
+    val message: String? = null,
+    val verified: Boolean? = null,
+    val resetToken: String? = null,
+    val attemptsRemaining: Int? = null,
+    val lockedUntil: String? = null
+)
+
+data class VerifyPasswordChangeOtpRequest(
+    val otp: String
+)
+
+data class ChangePasswordRequest(
+    val newPassword: String
 )
 
 data class UpdateProfileRequest(
+    @SerializedName("email") val email: String,
     @SerializedName("first_name") val firstName: String,
     @SerializedName("middle_name") val middleName: String?,
     @SerializedName("last_name") val lastName: String,
