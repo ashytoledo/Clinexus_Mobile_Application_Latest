@@ -1,5 +1,6 @@
 package com.example.clinexusapp.api
-
+import com.example.clinexusapp.model.ChangePasswordRequest
+import com.example.clinexusapp.model.ForgotPasswordRequest
 import android.util.Log
 import com.example.clinexusapp.model.*
 import com.example.clinexusapp.util.Resource
@@ -102,17 +103,54 @@ class AuthRepository(private val apiService: ApiService) {
     // ---------- FORGOT PASSWORD ----------
     suspend fun forgotPassword(email: String): Resource<GenericResponse> {
         return try {
-            val request = ForgotPasswordRequest(email)
+            val cleanEmail = email.trim()
+
+            Log.d("FORGOT_PASSWORD", "Sending forgot password request")
+            Log.d("FORGOT_PASSWORD", "Email: '$cleanEmail'")
+
+            val request = ForgotPasswordRequest(
+                email = cleanEmail
+            )
+
             val response = apiService.forgotPassword(request)
+
+            Log.d("FORGOT_PASSWORD", "HTTP Code: ${response.code()}")
+            Log.d("FORGOT_PASSWORD", "Successful: ${response.isSuccessful}")
+            Log.d("FORGOT_PASSWORD", "Response: ${response.body()}")
+            Log.d(
+                "FORGOT_PASSWORD",
+                "Error: ${response.errorBody()?.string()}"
+            )
+
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(parseError(response.errorBody()?.string()) ?: "Password reset request failed")
+                val errorBody = response.errorBody()?.string()
+
+                Resource.Error(
+                    parseError(errorBody)
+                        ?: "Forgot password request failed. HTTP ${response.code()}"
+                )
             }
+
+        } catch (e: IOException) {
+
+            Log.e("FORGOT_PASSWORD", "Network error", e)
+
+            Resource.Error(
+                "Could not connect to server. Check your internet connection."
+            )
+
         } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
+
+            Log.e("FORGOT_PASSWORD", "Unexpected error", e)
+
+            Resource.Error(
+                e.message ?: "An unexpected error occurred"
+            )
         }
     }
+
 
     // ---------- RESET PASSWORD ----------
     suspend fun resetPassword(resetToken: String, newPassword: String): Resource<GenericResponse> {
@@ -159,10 +197,10 @@ class AuthRepository(private val apiService: ApiService) {
         }
     }
 
-    suspend fun changePassword(newPassword: String): Resource<GenericResponse> {
+    suspend fun changePassword(changePasswordToken: String, newPassword: String): Resource<GenericResponse> {
         return try {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val request = ChangePasswordRequest(newPassword)
+            val request = ChangePasswordRequest(changePasswordToken, newPassword)
             val response = apiService.changePatientPassword("Bearer $token", request)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
@@ -170,7 +208,7 @@ class AuthRepository(private val apiService: ApiService) {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "Password change failed")
             }
         } catch (e: Exception) {
-            Resource.Error(e.message ?: "An unexpected error occurred")
+            Resource.Error(e.message ?: "Unexpected error")
         }
     }
 

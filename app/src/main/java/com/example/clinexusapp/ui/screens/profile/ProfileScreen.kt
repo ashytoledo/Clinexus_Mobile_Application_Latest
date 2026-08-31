@@ -35,6 +35,7 @@ fun ProfileScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPersonalInformation: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,   // ✅ NEW callback
     viewModel: ProfileViewModel,
 ) {
     val user by SessionManager.currentUser.collectAsState()
@@ -187,7 +188,7 @@ fun ProfileScreen(
                         iconColor = Color(0xFF64748B),
                         iconBg = Color(0xFFF1F5F9)
                     ) {
-                        scope.launch { snackbarHostState.showSnackbar("REDIRECTING: Security Protocol") }
+                        onNavigateToChangePassword()   // ✅ Navigate to Change Password Screen
                     }
                 }
 

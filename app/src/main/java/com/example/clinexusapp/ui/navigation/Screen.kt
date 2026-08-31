@@ -1,6 +1,7 @@
 package com.example.clinexusapp.ui.navigation
 
 sealed class Screen(val route: String) {
+    object ChangePassword : Screen("change_password")
     // Auth
     object Splash : Screen("splash")
     object Onboarding : Screen("onboarding")

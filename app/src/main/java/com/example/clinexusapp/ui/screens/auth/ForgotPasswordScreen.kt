@@ -1,3 +1,4 @@
+
 package com.example.clinexusapp.ui.screens.auth
 
 import androidx.compose.foundation.layout.*
@@ -11,83 +12,143 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.clinexusapp.ui.components.ElegantTextField
-import com.example.clinexusapp.ui.components.ElegantButton
-import com.example.clinexusapp.ui.components.ElegantCard
+import com.example.clinexusapp.ui.components.*
 import com.example.clinexusapp.util.Resource
 import com.example.clinexusapp.viewmodel.OTPViewModel
 
 @Composable
 fun ForgotPasswordScreen(
     viewModel: OTPViewModel,
-    onNavigateToReset: (String) -> Unit,
+    onNavigateToOtp: (String) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
+
     val otpState by viewModel.otpState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+
+    val snackbarHostState = remember {
+        SnackbarHostState()
+    }
 
     LaunchedEffect(otpState) {
-        if (otpState is Resource.Success) {
-            onNavigateToReset(email)
-            viewModel.resetState()
-        } else if (otpState is Resource.Error) {
-            snackbarHostState.showSnackbar(otpState?.message ?: "Request failed")
+
+        when (val state = otpState) {
+
+            is Resource.Success -> {
+
+                val response = state.data
+
+                // Temporary debugging
+                response?.debugOtp?.let { otp ->
+                    snackbarHostState.showSnackbar(
+                        "DEBUG OTP: $otp"
+                    )
+                }
+
+                onNavigateToOtp(email.trim())
+
+                viewModel.resetState()
+            }
+
+            is Resource.Error -> {
+
+                snackbarHostState.showSnackbar(
+                    state.message ?: "Failed to send OTP"
+                )
+            }
+
+            else -> Unit
         }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(24.dp),
+
             horizontalAlignment = Alignment.CenterHorizontally,
+
             verticalArrangement = Arrangement.Center
         ) {
+
             Text(
-                text = "Recovery",
+                text = "Forgot Password",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = (-1).sp
+                color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Enter your email to receive a\nsecure code for password reset.",
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center,
-                lineHeight = 22.sp
-            )
-            Spacer(modifier = Modifier.height(48.dp))
 
-            ElegantCard {
-                ElegantTextField(
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            Text(
+                text = "Enter your email address and we'll send you a verification code.",
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(
+                    alpha = 0.6f
+                ),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(
+                modifier = Modifier.height(48.dp)
+            )
+
+            NeumorphicCard {
+
+                MintTextField(
                     value = email,
-                    onValueChange = { email = it },
+
+                    onValueChange = {
+                        email = it
+                    },
+
                     label = "Email Address",
+
                     icon = Icons.Default.Email
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            ElegantButton(
-                text = if (otpState is Resource.Loading) "Processing..." else "Send Code",
-                onClick = { viewModel.forgotPassword(email) },
-                enabled = email.isNotEmpty() && otpState !is Resource.Loading
+            Spacer(
+                modifier = Modifier.height(32.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            VibrantButton(
+                text = if (otpState is Resource.Loading) {
+                    "Sending..."
+                } else {
+                    "Send Code"
+                },
 
-            TextButton(onClick = onNavigateBack) {
+                onClick = {
+                    viewModel.forgotPassword(
+                        email.trim()
+                    )
+                },
+
+                enabled = email.trim().isNotEmpty() &&
+                        otpState !is Resource.Loading
+            )
+
+            Spacer(
+                modifier = Modifier.height(24.dp)
+            )
+
+            TextButton(
+                onClick = onNavigateBack
+            ) {
                 Text(
-                    text = "Back to login", 
-                    color = MaterialTheme.colorScheme.primary, 
+                    text = "Back to Login",
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }

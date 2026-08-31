@@ -16,22 +16,11 @@ data class ResetPasswordRequest(
     val newPassword: String
 )
 
-data class GenericResponse(
-    val success: Boolean? = null,
-    val message: String? = null,
-    val verified: Boolean? = null,
-    val resetToken: String? = null,
-    val attemptsRemaining: Int? = null,
-    val lockedUntil: String? = null
-)
 
 data class VerifyPasswordChangeOtpRequest(
     val otp: String
 )
 
-data class ChangePasswordRequest(
-    val newPassword: String
-)
 
 data class UpdateProfileRequest(
     @SerializedName("email") val email: String,

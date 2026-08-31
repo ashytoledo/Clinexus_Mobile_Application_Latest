@@ -11,11 +11,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.clinexusapp.ui.components.ElegantTextField
-import com.example.clinexusapp.ui.components.ElegantButton
-import com.example.clinexusapp.ui.components.ElegantCard
+import com.example.clinexusapp.ui.components.*
 import com.example.clinexusapp.util.Resource
 import com.example.clinexusapp.viewmodel.OTPViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun ResetPasswordScreen(
@@ -27,13 +26,16 @@ fun ResetPasswordScreen(
     var confirmPassword by remember { mutableStateOf("") }
     val otpState by viewModel.otpState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(otpState) {
         if (otpState is Resource.Success) {
             onResetSuccess()
             viewModel.resetState()
         } else if (otpState is Resource.Error) {
-            snackbarHostState.showSnackbar(otpState?.message ?: "Reset failed")
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(otpState?.message ?: "Reset failed")
+            }
         }
     }
 
@@ -64,24 +66,40 @@ fun ResetPasswordScreen(
             )
             Spacer(modifier = Modifier.height(48.dp))
 
-            ElegantCard {
-                ElegantTextField(value = newPassword, onValueChange = { newPassword = it }, label = "New Password", icon = Icons.Default.Lock, isPassword = true)
+            NeumorphicCard {
+                MintTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = "New Password",
+                    icon = Icons.Default.Lock,
+                    isPassword = true
+                )
                 Spacer(modifier = Modifier.height(16.dp))
-                ElegantTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = "Confirm Password", icon = Icons.Default.LockReset, isPassword = true)
+                MintTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = "Confirm Password",
+                    icon = Icons.Default.LockReset,
+                    isPassword = true
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            ElegantButton(
+            VibrantButton(
                 text = if (otpState is Resource.Loading) "Resetting..." else "Reset Password",
                 onClick = {
                     if (newPassword == confirmPassword) {
                         viewModel.resetPassword(resetToken, newPassword)
                     } else {
-                        // In a real app, use snackbar
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Passwords do not match")
+                        }
                     }
                 },
-                enabled = newPassword.isNotEmpty() && newPassword == confirmPassword && otpState !is Resource.Loading
+                enabled = newPassword.isNotEmpty() &&
+                        newPassword == confirmPassword &&
+                        otpState !is Resource.Loading
             )
         }
     }

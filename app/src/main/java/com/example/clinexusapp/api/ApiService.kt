@@ -91,7 +91,6 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: ChangePasswordRequest
     ): Response<GenericResponse>
-
     @GET("api/patient-history")
     suspend fun getAppointmentHistory(
         @Header("Authorization") token: String

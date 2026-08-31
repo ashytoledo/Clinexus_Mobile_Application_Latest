@@ -88,6 +88,10 @@ fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER
                     onNavigateToHistory = {
                         rootNavController.navigate(Screen.AppointmentHistory.route)
                     },
+                    // ✅ NEW: Navigate to ChangePassword screen using the root controller
+                    onNavigateToChangePassword = {
+                        rootNavController.navigate(Screen.ChangePassword.route)
+                    },
                     viewModel = profileViewModel,
                 )
             }
@@ -147,7 +151,7 @@ fun TealNavItem(
     val primaryColor = MaterialTheme.colorScheme.primary
     val contentColor = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     val highlightColor = primaryColor.copy(alpha = 0.12f)
-    
+
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))

@@ -10,20 +10,21 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.clinexusapp.api.AddressRepository
+import com.example.clinexusapp.api.AppointmentRepository
 import com.example.clinexusapp.api.AuthRepository
 import com.example.clinexusapp.api.RetrofitClient
 import com.example.clinexusapp.ui.navigation.Screen
-import com.example.clinexusapp.ui.screens.auth.*
-import com.example.clinexusapp.ui.screens.main.MainScreen
 import com.example.clinexusapp.ui.screens.appointments.AppointmentBookingScreen
 import com.example.clinexusapp.ui.screens.appointments.AppointmentHistoryScreen
+import com.example.clinexusapp.ui.screens.auth.*
 import com.example.clinexusapp.ui.screens.chat.ChatScreen
-import com.example.clinexusapp.ui.screens.profile.PersonalInformationScreen
+import com.example.clinexusapp.ui.screens.main.MainScreen
 import com.example.clinexusapp.ui.screens.notifications.NotificationScreen
+import com.example.clinexusapp.ui.screens.profile.ChangePasswordScreen
+import com.example.clinexusapp.ui.screens.profile.PersonalInformationScreen
 import com.example.clinexusapp.ui.screens.settings.SettingsScreen
 import com.example.clinexusapp.util.SessionManager
 import com.example.clinexusapp.viewmodel.*
-import com.example.clinexusapp.api.AppointmentRepository
 
 @Composable
 fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsViewModel) {
@@ -40,6 +41,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         popEnterTransition = { fadeIn(tween(400)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(400)) },
         popExitTransition = { fadeOut(tween(400)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(400)) }
     ) {
+        // Splash, Onboarding, Login, Register
         composable(route = Screen.Splash.route) {
             SplashScreen(
                 onNavigateToOnboarding = {
@@ -92,6 +94,8 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                 }
             )
         }
+
+        // ---- OTP screen for email verification (registration) and password reset ----
         composable(
             route = Screen.OTP.route,
             arguments = listOf(
@@ -102,11 +106,10 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
             val email = backStackEntry.arguments?.getString("email") ?: ""
             val purpose = backStackEntry.arguments?.getString("purpose") ?: "verification"
             val otpViewModel: OTPViewModel = viewModel(factory = factory)
-            OTPVerificationScreen(
+            VerifyOTPScreen(
                 email = email,
                 viewModel = otpViewModel,
-                isPasswordReset = purpose == "reset",
-                onVerifySuccess = { resetToken ->
+                onOtpVerified = { resetToken ->
                     if (purpose == "reset") {
                         navController.navigate(Screen.ResetPassword.createRoute(resetToken ?: ""))
                     } else {
@@ -114,14 +117,19 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
                     }
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
+
+        // ---- Forgot Password (Step 1) ----
         composable(route = Screen.ForgotPassword.route) {
             val otpViewModel: OTPViewModel = viewModel(factory = factory)
             ForgotPasswordScreen(
                 viewModel = otpViewModel,
-                onNavigateToReset = { email ->
+                onNavigateToOtp = { email ->
                     navController.navigate(Screen.OTP.createRoute(email, "reset"))
                 },
                 onNavigateBack = {
@@ -129,6 +137,8 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                 }
             )
         }
+
+        // ---- Reset Password (Step 3) ----
         composable(
             route = Screen.ResetPassword.route,
             arguments = listOf(navArgument("resetToken") { type = NavType.StringType })
@@ -145,12 +155,31 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                 }
             )
         }
-        composable(route = Screen.Home.route) {
-            MainScreen(rootNavController = navController, settingsViewModel = settingsViewModel)
+
+        // ---- CHANGE PASSWORD (for logged‑in users) ----
+        composable(route = Screen.ChangePassword.route) {
+            val otpViewModel: OTPViewModel = viewModel(factory = factory)
+            ChangePasswordScreen(
+                viewModel = otpViewModel,
+                onBack = { navController.popBackStack() },
+                onChangeSuccess = {
+                    navController.popBackStack()
+                    // Optionally show a success message via snackbar or toast
+                }
+            )
         }
+
+        // ---- Main app screens ----
+        composable(route = Screen.Home.route) {
+            MainScreen(
+                rootNavController = navController,
+                settingsViewModel = settingsViewModel
+            )
+        }
+
         composable(
             route = Screen.AppointmentBooking.route,
-            arguments = listOf(navArgument("doctorName") { 
+            arguments = listOf(navArgument("doctorName") {
                 type = NavType.StringType
                 defaultValue = "Dr. Olivia Bennett"
             })
@@ -168,6 +197,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                 viewModel = bookingViewModel
             )
         }
+
         composable(route = Screen.AppointmentHistory.route) {
             val historyViewModel: HistoryViewModel = viewModel(factory = factory)
             AppointmentHistoryScreen(
@@ -178,6 +208,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                 viewModel = historyViewModel
             )
         }
+
         composable(route = Screen.Chat.route) {
             val chatViewModel: ChatViewModel = viewModel(factory = factory)
             ChatScreen(
@@ -185,11 +216,13 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                 viewModel = chatViewModel
             )
         }
+
         composable(route = Screen.Notifications.route) {
             NotificationScreen(
                 onBack = { navController.popBackStack() }
             )
         }
+
         composable(route = Screen.PersonalInformation.route) {
             val profileViewModel: ProfileViewModel = viewModel(factory = factory)
             PersonalInformationScreen(
@@ -197,6 +230,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                 viewModel = profileViewModel
             )
         }
+
         composable(route = Screen.Settings.route) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
