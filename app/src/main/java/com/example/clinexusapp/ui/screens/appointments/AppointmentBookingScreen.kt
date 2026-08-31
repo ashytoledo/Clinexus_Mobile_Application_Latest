@@ -128,19 +128,22 @@ fun BookingDateSelector(
             val isSelected = selected == option.value
             
             Surface(
-                onClick = { if (option.isEnabled) onSelect(option.value) else {} },
+                onClick = { onSelect(option.value) },
                 modifier = Modifier
                     .width(85.dp)
                     .height(110.dp)
-                    .alpha(if (option.isEnabled) 1f else 0.4f)
                     .shadow(
                         elevation = if (isSelected) 12.dp else 2.dp,
                         shape = RoundedCornerShape(22.dp),
-                        spotColor = if (isSelected) DeepTeal.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.05f),
+                        spotColor = if (isSelected) {
+                            if (option.isEnabled) DeepTeal.copy(alpha = 0.4f) else DarkRed.copy(alpha = 0.4f)
+                        } else Color.Black.copy(alpha = 0.05f),
                     ),
                 shape = RoundedCornerShape(22.dp),
-                color = if (isSelected) VibrantTeal else White,
-                enabled = option.isEnabled
+                color = if (isSelected) {
+                    if (option.isEnabled) VibrantTeal else DarkRed
+                } else White,
+                border = if (!option.isEnabled && !isSelected) androidx.compose.foundation.BorderStroke(1.dp, DarkRed.copy(alpha = 0.3f)) else null
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -149,14 +152,14 @@ fun BookingDateSelector(
                 ) {
                     Text(
                         text = option.display.split(" ").first(),
-                        color = if (isSelected) White.copy(alpha = 0.8f) else if (option.isEnabled) SlateGray else GrayMedium,
+                        color = if (isSelected) White.copy(alpha = 0.8f) else if (option.isEnabled) SlateGray else DarkRed.copy(alpha = 0.6f),
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = if (option.isEnabled) FontWeight.Bold else FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = option.display.split(" ").last(),
-                        color = if (isSelected) White else if (option.isEnabled) RoyalNavy else GrayMedium,
+                        color = if (isSelected) White else if (option.isEnabled) RoyalNavy else DarkRed,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Black
                     )
@@ -305,21 +308,50 @@ fun AppointmentBookingScreen(
                 
                 // Time Section
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    val scheduleState by viewModel.dentistSchedule.collectAsState()
+                    val workingDays = (scheduleState as? Resource.Success)?.data?.workingDays
+                    
                     BookingSectionHeader("Preferred Time", Icons.Default.AccessTime)
                     Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                        when (availableTimeslots) {
-                            is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = VibrantTeal) }
-                            is Resource.Error -> Text(availableTimeslots.message ?: "Select dentist first", color = SlateGray, modifier = Modifier.padding(16.dp))
-                            is Resource.Success -> {
-                                val slots = availableTimeslots.data ?: emptyList()
-                                if (slots.isEmpty()) {
-                                    Text("No times available", color = SlateGray, modifier = Modifier.padding(16.dp))
-                                } else {
-                                    BookingTimeGrid(
-                                        slots = slots,
-                                        selectedSlot = selectedSlot
-                                    ) { 
-                                        selectedSlot = it 
+                        val isNonWorkingDay = workingDays != null && selectedDate.isNotEmpty() && run {
+                            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            val dayFormat = SimpleDateFormat("EEEE", Locale.US)
+                            try {
+                                val date = sdf.parse(selectedDate)
+                                val dayName = dayFormat.format(date!!)
+                                workingDays.none { it.equals(dayName, ignoreCase = true) }
+                            } catch (e: Exception) {
+                                false
+                            }
+                        }
+
+                        if (isNonWorkingDay) {
+                            Text(
+                                text = "Dr. ${selectedDentist?.dentistName ?: doctorName} has no availability for the selected day.",
+                                color = DarkRed,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        } else {
+                            when (availableTimeslots) {
+                                is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = VibrantTeal) }
+                                is Resource.Error -> Text(availableTimeslots.message ?: "Select dentist first", color = SlateGray, modifier = Modifier.padding(16.dp))
+                                is Resource.Success -> {
+                                    val slots = availableTimeslots.data ?: emptyList()
+                                    if (slots.isEmpty() && selectedDate.isNotEmpty()) {
+                                        Text(
+                                            text = "Dr. ${selectedDentist?.dentistName ?: doctorName} has no availability for the selected day.",
+                                            color = DarkRed,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(16.dp)
+                                        )
+                                    } else if (slots.isNotEmpty()) {
+                                        BookingTimeGrid(
+                                            slots = slots,
+                                            selectedSlot = selectedSlot
+                                        ) { 
+                                            selectedSlot = it 
+                                        }
                                     }
                                 }
                             }

@@ -24,7 +24,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.clinexusapp.ui.navigation.BottomBarScreen
 import com.example.clinexusapp.ui.navigation.Screen
 import com.example.clinexusapp.ui.screens.dashboard.DashboardScreen
-import com.example.clinexusapp.ui.screens.doctors.DoctorListScreen
 import com.example.clinexusapp.ui.screens.chat.ChatScreen
 import com.example.clinexusapp.ui.screens.profile.ProfileScreen
 import com.example.clinexusapp.ui.screens.appointments.AppointmentHistoryScreen
@@ -55,11 +54,6 @@ fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER
             composable(route = Screen.Dashboard.route) {
                 val dashboardViewModel: DashboardViewModel = viewModel(factory = factory)
                 DashboardScreen(dashboardViewModel, rootNavController)
-            }
-            composable(route = Screen.DoctorList.route) {
-                DoctorListScreen { name ->
-                        rootNavController.navigate(Screen.AppointmentBooking.createRoute(name))
-                    }
             }
             composable(route = Screen.Chat.route) {
                 val chatViewModel: ChatViewModel = viewModel(factory = factory)
@@ -105,7 +99,6 @@ fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER
 fun TealBottomBar(navController: NavHostController) {
     val screens = listOf(
         BottomBarScreen.Dashboard,
-        BottomBarScreen.Doctors,
         BottomBarScreen.Appointments,
         BottomBarScreen.Chat,
         BottomBarScreen.Profile

@@ -15,11 +15,6 @@ sealed class BottomBarScreen(
         title = "Home",
         icon = Icons.Default.Home,
     )
-    object Doctors : BottomBarScreen(
-        route = Screen.DoctorList.route,
-        title = "Doctors",
-        icon = Icons.Default.MedicalServices,
-    )
     object Appointments : BottomBarScreen(
         route = Screen.AppointmentHistory.route,
         title = "Visits",

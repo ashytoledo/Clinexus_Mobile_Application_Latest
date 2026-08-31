@@ -72,7 +72,7 @@ fun AppointmentHistoryScreen(
                     showActionDialog = false
                     showCancelDialog = true
                 }) {
-                    Text("CANCEL VISIT", color = Color.Red)
+                    Text("CANCEL VISIT", color = DarkRed)
                 }
             },
             containerColor = White,
@@ -84,7 +84,7 @@ fun AppointmentHistoryScreen(
     if (showCancelDialog && selectedAppointment != null) {
         AlertDialog(
             onDismissRequest = { showCancelDialog = false },
-            title = { Text("Cancel Appointment", fontWeight = FontWeight.Bold, color = Color.Red) },
+            title = { Text("Cancel Appointment", fontWeight = FontWeight.Bold, color = DarkRed) },
             text = {
                 Column {
                     Text("Please tell us why you are cancelling:")
@@ -109,7 +109,7 @@ fun AppointmentHistoryScreen(
                             scope.launch { snackbarHostState.showSnackbar("Cancellation Request Sent") }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkRed),
                     enabled = cancelReason.isNotBlank()
                 ) {
                     Text("CONFIRM CANCEL")

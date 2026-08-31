@@ -33,7 +33,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     val onboardingData = listOf(
-        OnboardingPage("Expert Dental Care", "Consult with top-tier dental specialists from the comfort of your home."),
+        OnboardingPage("Expert Dental Care", "Consult with top-tier dental professionals from the comfort of your home."),
         OnboardingPage("Smart Scheduling", "Book and manage your appointments with our intelligent clinic system."),
         OnboardingPage("Health Records", "Keep your dental history and treatment plans securely organized.")
     )

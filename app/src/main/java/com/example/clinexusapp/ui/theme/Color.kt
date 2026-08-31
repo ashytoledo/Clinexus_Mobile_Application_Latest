@@ -16,6 +16,7 @@ val TealMuted = Color(0xFF7FC8C0)
 val SlateGray = Color(0xFF64748B)
 val LightSlate = Color(0xFF94A3B8)
 val ErrorRed = Color(0xFFEF4444)
+val DarkRed = Color(0xFF8B0000)
 
 // Standard Colors (mapped for compatibility)
 val BluePrimary = DeepTeal
