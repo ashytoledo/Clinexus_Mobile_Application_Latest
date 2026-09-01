@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,21 +28,20 @@ import com.example.clinexusapp.ui.screens.profile.ProfileScreen
 import com.example.clinexusapp.ui.screens.appointments.AppointmentHistoryScreen
 import com.example.clinexusapp.util.SessionManager
 import com.example.clinexusapp.viewmodel.*
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.clinexusapp.api.AddressRepository
-import com.example.clinexusapp.api.AppointmentRepository
-import com.example.clinexusapp.api.AuthRepository
-import com.example.clinexusapp.api.RetrofitClient
+import androidx.hilt.navigation.compose.hiltViewModel
+
 
 @Composable
 fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER") settingsViewModel: SettingsViewModel) {
-    val repository = AuthRepository(RetrofitClient.instance)
-    val addressRepository = AddressRepository(RetrofitClient.addressInstance)
-    val appointmentRepository = AppointmentRepository(RetrofitClient.appointmentInstance)
-    val factory = ViewModelFactory(repository, addressRepository, appointmentRepository)
     val navController = rememberNavController()
+    var isBottomBarVisible by remember { mutableStateOf(true) }
+
     Scaffold(
-        bottomBar = { TealBottomBar(navController = navController) },
+        bottomBar = { 
+            if (isBottomBarVisible) {
+                TealBottomBar(navController = navController)
+            }
+        },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         NavHost(
@@ -52,15 +50,19 @@ fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER
             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
         ) {
             composable(route = Screen.Dashboard.route) {
-                val dashboardViewModel: DashboardViewModel = viewModel(factory = factory)
+                val dashboardViewModel: DashboardViewModel = hiltViewModel()
                 DashboardScreen(dashboardViewModel, rootNavController)
             }
             composable(route = Screen.Chat.route) {
-                val chatViewModel: ChatViewModel = viewModel(factory = factory)
-                ChatScreen(onBack = { navController.popBackStack() }, viewModel = chatViewModel)
+                val chatViewModel: ChatViewModel = hiltViewModel()
+                ChatScreen(
+                    onBack = { navController.popBackStack() }, 
+                    viewModel = chatViewModel,
+                    onVisibilityChange = { isBottomBarVisible = it }
+                )
             }
             composable(route = Screen.AppointmentHistory.route) {
-                val historyViewModel: HistoryViewModel = viewModel(factory = factory)
+                val historyViewModel: HistoryViewModel = hiltViewModel()
                 AppointmentHistoryScreen(
                     onBack = { navController.popBackStack() },
                     onNavigateToBooking = {
@@ -70,7 +72,7 @@ fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER
                 )
             }
             composable(route = Screen.Profile.route) {
-                val profileViewModel: ProfileViewModel = viewModel(factory = factory)
+                val profileViewModel: ProfileViewModel = hiltViewModel()
                 ProfileScreen(
                     onLogout = {
                         SessionManager.logout()

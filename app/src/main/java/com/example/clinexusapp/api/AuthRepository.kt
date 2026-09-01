@@ -11,8 +11,11 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class AuthRepository(private val apiService: ApiService) {
+@Singleton
+class AuthRepository @Inject constructor(private val apiService: ApiService) {
 
     // Helper to convert String to RequestBody for multipart
     private fun String.toPart(): RequestBody =
@@ -43,7 +46,7 @@ class AuthRepository(private val apiService: ApiService) {
             val middleNamePart = if (request.middleName.isNullOrBlank()) null else request.middleName.toPart()
 
             val response = apiService.registerPatient(
-                email = request.email.toPart(),
+                email = request.email.trim().lowercase().toPart(),
                 password = request.password.toPart(),
                 firstName = request.firstName.toPart(),
                 middleName = middleNamePart,
@@ -73,10 +76,15 @@ class AuthRepository(private val apiService: ApiService) {
     // ---------- VERIFY EMAIL ----------
     suspend fun verifyEmail(email: String, otp: String): Resource<GenericResponse> {
         return try {
-            val request = VerifyOtpRequest(email, otp)
+            val request = VerifyOtpRequest(email.trim().lowercase(), otp)
             val response = apiService.verifyEmail(request)
             if (response.isSuccessful && response.body() != null) {
-                Resource.Success(response.body()!!)
+                val body = response.body()!!
+                if (body.success == true) {
+                    Resource.Success(body)
+                } else {
+                    Resource.Error(body.message ?: "OTP verification failed")
+                }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
             }
@@ -88,10 +96,15 @@ class AuthRepository(private val apiService: ApiService) {
     // ---------- VERIFY OTP (for password reset) ----------
     suspend fun verifyOTP(email: String, otp: String): Resource<GenericResponse> {
         return try {
-            val request = VerifyOtpRequest(email, otp)
+            val request = VerifyOtpRequest(email.trim().lowercase(), otp)
             val response = apiService.verifyOTP(request)
             if (response.isSuccessful && response.body() != null) {
-                Resource.Success(response.body()!!)
+                val body = response.body()!!
+                if (body.success == true) {
+                    Resource.Success(body)
+                } else {
+                    Resource.Error(body.message ?: "OTP verification failed")
+                }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
             }
@@ -103,7 +116,7 @@ class AuthRepository(private val apiService: ApiService) {
     // ---------- FORGOT PASSWORD ----------
     suspend fun forgotPassword(email: String): Resource<GenericResponse> {
         return try {
-            val cleanEmail = email.trim()
+            val cleanEmail = email.trim().lowercase()
 
             Log.d("FORGOT_PASSWORD", "Sending forgot password request")
             Log.d("FORGOT_PASSWORD", "Email: '$cleanEmail'")
@@ -117,13 +130,14 @@ class AuthRepository(private val apiService: ApiService) {
             Log.d("FORGOT_PASSWORD", "HTTP Code: ${response.code()}")
             Log.d("FORGOT_PASSWORD", "Successful: ${response.isSuccessful}")
             Log.d("FORGOT_PASSWORD", "Response: ${response.body()}")
-            Log.d(
-                "FORGOT_PASSWORD",
-                "Error: ${response.errorBody()?.string()}"
-            )
-
+            
             if (response.isSuccessful && response.body() != null) {
-                Resource.Success(response.body()!!)
+                val body = response.body()!!
+                if (body.success == true) {
+                    Resource.Success(body)
+                } else {
+                    Resource.Error(body.message ?: "Failed to send reset code")
+                }
             } else {
                 val errorBody = response.errorBody()?.string()
 
@@ -158,7 +172,12 @@ class AuthRepository(private val apiService: ApiService) {
             val request = ResetPasswordRequest(resetToken, newPassword)
             val response = apiService.resetPassword(request)
             if (response.isSuccessful && response.body() != null) {
-                Resource.Success(response.body()!!)
+                val body = response.body()!!
+                if (body.success == true) {
+                    Resource.Success(body)
+                } else {
+                    Resource.Error(body.message ?: "Password reset failed")
+                }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "Password reset failed")
             }
@@ -173,7 +192,12 @@ class AuthRepository(private val apiService: ApiService) {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
             val response = apiService.requestPasswordChange("Bearer $token")
             if (response.isSuccessful && response.body() != null) {
-                Resource.Success(response.body()!!)
+                val body = response.body()!!
+                if (body.success == true) {
+                    Resource.Success(body)
+                } else {
+                    Resource.Error(body.message ?: "Password change request failed")
+                }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "Password change request failed")
             }
@@ -188,7 +212,12 @@ class AuthRepository(private val apiService: ApiService) {
             val request = VerifyPasswordChangeOtpRequest(otp)
             val response = apiService.verifyPasswordChangeOTP("Bearer $token", request)
             if (response.isSuccessful && response.body() != null) {
-                Resource.Success(response.body()!!)
+                val body = response.body()!!
+                if (body.success == true) {
+                    Resource.Success(body)
+                } else {
+                    Resource.Error(body.message ?: "OTP verification failed")
+                }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
             }
@@ -203,7 +232,12 @@ class AuthRepository(private val apiService: ApiService) {
             val request = ChangePasswordRequest(changePasswordToken, newPassword)
             val response = apiService.changePatientPassword("Bearer $token", request)
             if (response.isSuccessful && response.body() != null) {
-                Resource.Success(response.body()!!)
+                val body = response.body()!!
+                if (body.success == true) {
+                    Resource.Success(body)
+                } else {
+                    Resource.Error(body.message ?: "Password change failed")
+                }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "Password change failed")
             }
@@ -328,6 +362,7 @@ class AuthRepository(private val apiService: ApiService) {
         }
     }
 
+    /*
     suspend fun getChatMessages(): Resource<List<ChatMessageDTO>> {
         return try {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
@@ -341,6 +376,7 @@ class AuthRepository(private val apiService: ApiService) {
             Resource.Error(e.message ?: "Unexpected error")
         }
     }
+    */
 
     suspend fun getConversationMessages(conversationID: Int): Resource<ConversationMessagesResponse> {
         return try {
@@ -356,30 +392,40 @@ class AuthRepository(private val apiService: ApiService) {
         }
     }
 
-    suspend fun sendMessage(receiverAccountType: String, receiverAccountID: Int, messageContent: String): Resource<SendMessageResponse> {
+    suspend fun markConversationAsRead(conversationID: Int, lastMessageId: Int): Resource<Unit> {
         return try {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val request = SendMessageRequest(receiverAccountType, receiverAccountID, messageContent)
-            val response = apiService.sendMessage("Bearer $token", request)
-            if (response.isSuccessful && response.body() != null) {
-                Resource.Success(response.body()!!)
+            val request = MarkReadRequest(lastMessageId)
+            val response = apiService.markConversationAsRead("Bearer $token", conversationID, request)
+            if (response.isSuccessful) {
+                Resource.Success(Unit)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to send message")
+                Resource.Error(response.errorBody()?.string() ?: "Failed to mark as read")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Unexpected error")
         }
     }
 
-    suspend fun markConversationAsRead(conversationID: Int, lastMessageId: Int): Resource<GenericResponse> {
+    suspend fun sendMessage(
+        receiverAccountType: String,
+        receiverAccountID: Int,
+        messageContent: String,
+        conversationID: Int?,
+        attachmentPart: MultipartBody.Part? = null
+    ): Resource<SendMessageResponse> {
         return try {
             val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val request = MarkReadRequest(lastMessageId)
-            val response = apiService.markConversationAsRead("Bearer $token", conversationID, request)
+            val typePart = receiverAccountType.toPart()
+            val idPart = receiverAccountID.toString().toPart()
+            val contentPart = messageContent.toPart()
+            val convPart = conversationID?.toString()?.toPart()
+
+            val response = apiService.sendMessage("Bearer $token", typePart, idPart, contentPart, convPart, attachmentPart)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Failed to mark as read")
+                Resource.Error(response.errorBody()?.string() ?: "Failed to send message")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Unexpected error")

@@ -15,7 +15,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.clinexusapp.navigation.SetupNavGraph
 import com.example.clinexusapp.ui.theme.ClinexusAppTheme
 import com.example.clinexusapp.viewmodel.SettingsViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

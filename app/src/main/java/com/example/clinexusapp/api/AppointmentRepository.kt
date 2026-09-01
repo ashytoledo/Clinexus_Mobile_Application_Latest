@@ -9,7 +9,11 @@ import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
 import android.util.Log
-class AppointmentRepository(
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class AppointmentRepository @Inject constructor(
     private val apiService: AppointmentApiService,
 ) {
 

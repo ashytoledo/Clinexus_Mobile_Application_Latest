@@ -87,13 +87,14 @@ fun PersonalInformationScreen(onBack: () -> Unit, viewModel: ProfileViewModel) {
         }
     }
 
-    LaunchedEffect(updateState) {
-        if (updateState is Resource.Success) {
+    val state = updateState
+    LaunchedEffect(state) {
+        if (state is Resource.Success) {
             snackbarHostState.showSnackbar("Profile updated successfully")
             profileImageUri = null // Clear local selection to show updated server image
             viewModel.resetState()
-        } else if (updateState is Resource.Error) {
-            snackbarHostState.showSnackbar(updateState?.message ?: "Update failed")
+        } else if (state is Resource.Error) {
+            snackbarHostState.showSnackbar(state.message ?: "Update failed")
         }
     }
 

@@ -1,5 +1,6 @@
 package com.example.clinexusapp.api
-
+import com.example.clinexusapp.model.SendMessageResponse
+import com.example.clinexusapp.model.MarkReadRequest
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -96,6 +97,9 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Response<List<AppointmentDTO>>
 
+
+        // --------------------- CHAT ENDPOINTS ---------------------
+
     @GET("api/available-contacts")
     suspend fun getAvailableContacts(
         @Header("Authorization") token: String
@@ -109,26 +113,26 @@ interface ApiService {
     @GET("api/conversations/{conversationID}/messages")
     suspend fun getConversationMessages(
         @Header("Authorization") token: String,
-        @Path("conversationID") conversationID: Int
+        @Path("conversationID") conversationId: Int
     ): Response<ConversationMessagesResponse>
 
+    @Multipart
     @POST("api/conversations/send-message")
     suspend fun sendMessage(
         @Header("Authorization") token: String,
-        @Body request: SendMessageRequest
+        @Part("receiverAccountType") receiverType: RequestBody,
+        @Part("receiverAccountID") receiverId: RequestBody,
+        @Part("messageContent") content: RequestBody,
+        @Part("conversationID") convId: RequestBody?,
+        @Part file: MultipartBody.Part?
     ): Response<SendMessageResponse>
 
     @PATCH("api/conversations/{conversationID}/read")
     suspend fun markConversationAsRead(
         @Header("Authorization") token: String,
-        @Path("conversationID") conversationID: Int,
+        @Path("conversationID") conversationId: Int,
         @Body request: MarkReadRequest
-    ): Response<GenericResponse>
-
-    @GET("api/chat-messages")
-    suspend fun getChatMessages(
-        @Header("Authorization") token: String
-    ): Response<List<ChatMessageDTO>>
+    ): Response<Unit>
 
     @GET("api/clinic-news")
     suspend fun getClinicNews(

@@ -11,13 +11,16 @@ import com.example.clinexusapp.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class HistoryViewModel(
+@HiltViewModel
+class HistoryViewModel @Inject constructor(
     private val repository: AuthRepository,
     private val appointmentRepository: AppointmentRepository
 ) : ViewModel() {
 
-    private val _historyState = MutableStateFlow<Resource<List<AppointmentDTO>>>(Resource.Loading())
+    private val _historyState = MutableStateFlow<Resource<List<AppointmentDTO>>>(Resource.Loading)
     val historyState = _historyState.asStateFlow()
 
     init {
@@ -26,7 +29,7 @@ class HistoryViewModel(
 
     fun fetchHistory() {
         viewModelScope.launch {
-            _historyState.value = Resource.Loading()
+            _historyState.value = Resource.Loading
             val result = appointmentRepository.getPatientAppointments()
             
             if (result is Resource.Success && result.data != null) {

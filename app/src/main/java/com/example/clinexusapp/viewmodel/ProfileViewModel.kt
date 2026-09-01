@@ -11,10 +11,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class ProfileViewModel(
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
     private val repository: AuthRepository,
-    private val addressRepository: AddressRepository? = null
+    private val addressRepository: AddressRepository
 ) : ViewModel() {
 
     // Update state
@@ -41,7 +44,7 @@ class ProfileViewModel(
     // ---------- Address Helpers ----------
     private fun loadRegions() {
         viewModelScope.launch {
-            addressRepository?.getRegions()?.let { result ->
+            addressRepository.getRegions().let { result ->
                 if (result is Resource.Success) {
                     _regions.value = result.data ?: emptyList()
                 }
@@ -54,7 +57,7 @@ class ProfileViewModel(
             _provinces.value = emptyList()
             _cities.value = emptyList()
             _barangays.value = emptyList()
-            addressRepository?.getProvinces(regionCode)?.let { result ->
+            addressRepository.getProvinces(regionCode).let { result ->
                 if (result is Resource.Success) {
                     _provinces.value = result.data ?: emptyList()
                 }
@@ -66,7 +69,7 @@ class ProfileViewModel(
         viewModelScope.launch {
             _cities.value = emptyList()
             _barangays.value = emptyList()
-            addressRepository?.getCities(provinceCode)?.let { result ->
+            addressRepository.getCities(provinceCode).let { result ->
                 if (result is Resource.Success) {
                     _cities.value = result.data ?: emptyList()
                 }
@@ -77,7 +80,7 @@ class ProfileViewModel(
     fun onCitySelected(cityCode: String) {
         viewModelScope.launch {
             _barangays.value = emptyList()
-            addressRepository?.getBarangays(cityCode)?.let { result ->
+            addressRepository.getBarangays(cityCode).let { result ->
                 if (result is Resource.Success) {
                     _barangays.value = result.data ?: emptyList()
                 }
@@ -113,7 +116,7 @@ class ProfileViewModel(
                 barangay = currentUser.barangay ?: ""
             )
 
-            _updateState.value = Resource.Loading()
+            _updateState.value = Resource.Loading
 
             val result = repository.updatePatientProfile(request)
 
@@ -130,7 +133,7 @@ class ProfileViewModel(
         profileImage: MultipartBody.Part? = null
     ) {
         viewModelScope.launch {
-            _updateState.value = Resource.Loading()
+            _updateState.value = Resource.Loading
             val result = repository.updatePatientProfile(request, profileImage)
 
             if (result is Resource.Success) {

@@ -12,8 +12,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class BookingViewModel(
+@HiltViewModel
+class BookingViewModel @Inject constructor(
     private val repository: AuthRepository,
     private val appointmentRepository: AppointmentRepository
 ) : ViewModel() {
@@ -21,10 +24,10 @@ class BookingViewModel(
     private val _bookingState = MutableStateFlow<Resource<CreateAppointmentResponse>?>(null)
     val bookingState = _bookingState.asStateFlow()
 
-    private val _dentistsState = MutableStateFlow<Resource<List<DentistDTO>>>(Resource.Loading())
+    private val _dentistsState = MutableStateFlow<Resource<List<DentistDTO>>>(Resource.Loading)
     val dentistsState = _dentistsState.asStateFlow()
 
-    private val _servicesState = MutableStateFlow<Resource<List<BookableServiceDTO>>>(Resource.Loading())
+    private val _servicesState = MutableStateFlow<Resource<List<BookableServiceDTO>>>(Resource.Loading)
     val servicesState = _servicesState.asStateFlow()
 
     private val _selectedDentist = MutableStateFlow<DentistDTO?>(null)
@@ -33,7 +36,7 @@ class BookingViewModel(
     private val _selectedServices = MutableStateFlow<List<BookableServiceDTO>>(emptyList())
     val selectedServices = _selectedServices.asStateFlow()
 
-    private val _availableTimeslots = MutableStateFlow<Resource<List<AvailableSlotDTO>>>(Resource.Loading())
+    private val _availableTimeslots = MutableStateFlow<Resource<List<AvailableSlotDTO>>>(Resource.Loading)
     val availableTimeslots = _availableTimeslots.asStateFlow()
 
     private val _dentistSchedule = MutableStateFlow<Resource<DentistScheduleDTO>?>(null)
@@ -50,7 +53,7 @@ class BookingViewModel(
 
     fun fetchDentists() {
         viewModelScope.launch {
-            _dentistsState.value = Resource.Loading()
+            _dentistsState.value = Resource.Loading
             val result = appointmentRepository.getActiveDentists()
             if (result is Resource.Success) {
                 _dentistsState.value = Resource.Success(result.data?.take(4) ?: emptyList())
@@ -62,7 +65,7 @@ class BookingViewModel(
 
     fun fetchServices() {
         viewModelScope.launch {
-            _servicesState.value = Resource.Loading()
+            _servicesState.value = Resource.Loading
             val result = appointmentRepository.getBookableServices()
             if (result is Resource.Success) {
                 _servicesState.value = Resource.Success(result.data?.take(4) ?: emptyList())
@@ -80,7 +83,7 @@ class BookingViewModel(
 
     private fun fetchDentistSchedule(dentistId: Int) {
         viewModelScope.launch {
-            _dentistSchedule.value = Resource.Loading()
+            _dentistSchedule.value = Resource.Loading
             _dentistSchedule.value = appointmentRepository.getDentistSchedule(dentistId)
         }
     }
@@ -105,7 +108,7 @@ class BookingViewModel(
 
     private fun fetchTimeslots(dentistId: Int, date: String) {
         viewModelScope.launch {
-            _availableTimeslots.value = Resource.Loading()
+            _availableTimeslots.value = Resource.Loading
             _availableTimeslots.value = appointmentRepository.getAvailableTimeslots(dentistId, date)
         }
     }
@@ -129,7 +132,7 @@ class BookingViewModel(
         }
 
         viewModelScope.launch {
-            _bookingState.value = Resource.Loading()
+            _bookingState.value = Resource.Loading
             val request = CreateAppointmentRequest(
                 patientId = patientId,
                 dentistId = dentist.dentistId,

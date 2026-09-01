@@ -86,12 +86,13 @@ fun RegisterScreen(
             selectedCity != null &&
             selectedBarangay != null
 
-    LaunchedEffect(registerState, validationError) {
-        if (registerState is Resource.Success) {
+    val state = registerState
+    LaunchedEffect(state, validationError) {
+        if (state is Resource.Success) {
             onRegisterSuccess(email)
             viewModel.resetState()
-        } else if (registerState is Resource.Error) {
-            snackbarHostState.showSnackbar(registerState?.message ?: "Registration failed")
+        } else if (state is Resource.Error) {
+            snackbarHostState.showSnackbar(state.message ?: "Registration failed")
         }
 
         validationError?.let {

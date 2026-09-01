@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class RegisterViewModel(
+@HiltViewModel
+class RegisterViewModel @Inject constructor(
     private val repository: AuthRepository,
     private val addressRepository: AddressRepository
 ) : ViewModel() {
@@ -132,7 +135,7 @@ class RegisterViewModel(
 
         _validationError.value = null
         viewModelScope.launch {
-            _registerState.value = Resource.Loading()
+            _registerState.value = Resource.Loading
             val request = RegisterRequest(
                 email, password, firstName, middleName, lastName, phoneNumber, dateOfBirth,
                 streetAddress, province, city, barangay

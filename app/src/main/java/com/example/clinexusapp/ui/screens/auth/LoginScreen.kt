@@ -29,12 +29,13 @@ fun LoginScreen(
     val loginState by viewModel.loginState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(loginState) {
-        if (loginState is Resource.Success) {
+    val state = loginState
+    LaunchedEffect(state) {
+        if (state is Resource.Success) {
             onLoginSuccess()
             viewModel.resetState()
-        } else if (loginState is Resource.Error) {
-            snackbarHostState.showSnackbar(loginState?.message ?: "Login failed")
+        } else if (state is Resource.Error) {
+            snackbarHostState.showSnackbar(state.message ?: "Login failed")
         }
     }
 

@@ -2,8 +2,11 @@ package com.example.clinexusapp.api
 
 import com.example.clinexusapp.model.*
 import com.example.clinexusapp.util.Resource
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class AddressRepository(private val apiService: AddressApiService) {
+@Singleton
+class AddressRepository @Inject constructor(private val apiService: AddressApiService) {
 
     suspend fun getRegions(): Resource<List<Region>> {
         return try {

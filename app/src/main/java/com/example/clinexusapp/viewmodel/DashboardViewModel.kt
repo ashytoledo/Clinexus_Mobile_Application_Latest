@@ -14,16 +14,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class DashboardViewModel(
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
     private val repository: AuthRepository,
     private val appointmentRepository: AppointmentRepository
 ) : ViewModel() {
 
-    private val _newsState = MutableStateFlow<Resource<List<ClinicNewsDTO>>>(Resource.Loading())
+    private val _newsState = MutableStateFlow<Resource<List<ClinicNewsDTO>>>(Resource.Loading)
     val newsState = _newsState.asStateFlow()
 
-    private val _insightsState = MutableStateFlow<Resource<List<HealthInsightDTO>>>(Resource.Loading())
+    private val _insightsState = MutableStateFlow<Resource<List<HealthInsightDTO>>>(Resource.Loading)
     val insightsState = _insightsState.asStateFlow()
 
     private val _nextAppointment = MutableStateFlow<AppointmentDTO?>(null)
@@ -35,8 +38,8 @@ class DashboardViewModel(
 
     fun fetchDashboardData() {
         viewModelScope.launch {
-            _newsState.value = Resource.Loading()
-            _insightsState.value = Resource.Loading()
+            _newsState.value = Resource.Loading
+            _insightsState.value = Resource.Loading
             
             // Parallel execution
             launch {

@@ -32,8 +32,9 @@ fun ChangePasswordScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(otpState) {
-        if (otpState is Resource.Success) {
+    val state = otpState
+    LaunchedEffect(state) {
+        if (state is Resource.Success) {
             when (step) {
                 0 -> step = 1
                 1 -> step = 2
@@ -42,9 +43,9 @@ fun ChangePasswordScreen(
                     viewModel.resetState()
                 }
             }
-        } else if (otpState is Resource.Error) {
+        } else if (state is Resource.Error) {
             coroutineScope.launch {
-                snackbarHostState.showSnackbar(otpState?.message ?: "Operation failed")
+                snackbarHostState.showSnackbar(state.message ?: "Operation failed")
             }
         }
     }

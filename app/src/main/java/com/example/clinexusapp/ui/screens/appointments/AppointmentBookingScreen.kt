@@ -228,11 +228,12 @@ fun AppointmentBookingScreen(
                 // Dentist Grid
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     BookingSectionHeader("Select Dentist", Icons.Default.Person)
-                    when (dentistsState) {
+                    val dState = dentistsState
+                    when (dState) {
                         is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = VibrantTeal) }
-                        is Resource.Error -> Text(dentistsState.message ?: "Error", color = Color.Red, modifier = Modifier.padding(horizontal = 24.dp))
+                        is Resource.Error -> Text(dState.message ?: "Error", color = Color.Red, modifier = Modifier.padding(horizontal = 24.dp))
                         is Resource.Success -> {
-                            val dentists = dentistsState.data ?: emptyList()
+                            val dentists = dState.data ?: emptyList()
                             Column(
                                 modifier = Modifier.padding(horizontal = 24.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -255,17 +256,19 @@ fun AppointmentBookingScreen(
                                 }
                             }
                         }
+                        else -> {}
                     }
                 }
                 
                 // Services Grid
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     BookingSectionHeader("Select Service", Icons.Default.MedicalServices)
-                    when (servicesState) {
+                    val sState = servicesState
+                    when (sState) {
                         is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = VibrantTeal) }
-                        is Resource.Error -> Text(servicesState.message ?: "Error", color = Color.Red, modifier = Modifier.padding(horizontal = 24.dp))
+                        is Resource.Error -> Text(sState.message ?: "Error", color = Color.Red, modifier = Modifier.padding(horizontal = 24.dp))
                         is Resource.Success -> {
-                            val services = servicesState.data ?: emptyList()
+                            val services = sState.data ?: emptyList()
                             Column(
                                 modifier = Modifier.padding(horizontal = 24.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -288,13 +291,15 @@ fun AppointmentBookingScreen(
                                 }
                             }
                         }
+                        else -> {}
                     }
                 }
 
                 // Date Section
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     val scheduleState by viewModel.dentistSchedule.collectAsState()
-                    val workingDays = (scheduleState as? Resource.Success)?.data?.workingDays
+                    val scState = scheduleState
+                    val workingDays = (scState as? Resource.Success)?.data?.workingDays
                     
                     BookingSectionHeader("Select Date", Icons.Default.Event)
                     BookingDateSelector(
@@ -309,7 +314,8 @@ fun AppointmentBookingScreen(
                 // Time Section
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     val scheduleState by viewModel.dentistSchedule.collectAsState()
-                    val workingDays = (scheduleState as? Resource.Success)?.data?.workingDays
+                    val scState = scheduleState
+                    val workingDays = (scState as? Resource.Success)?.data?.workingDays
                     
                     BookingSectionHeader("Preferred Time", Icons.Default.AccessTime)
                     Box(modifier = Modifier.padding(horizontal = 24.dp)) {
@@ -333,11 +339,12 @@ fun AppointmentBookingScreen(
                                 modifier = Modifier.padding(16.dp)
                             )
                         } else {
-                            when (availableTimeslots) {
+                            val aState = availableTimeslots
+                            when (aState) {
                                 is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = VibrantTeal) }
-                                is Resource.Error -> Text(availableTimeslots.message ?: "Select dentist first", color = SlateGray, modifier = Modifier.padding(16.dp))
+                                is Resource.Error -> Text(aState.message ?: "Select dentist first", color = SlateGray, modifier = Modifier.padding(16.dp))
                                 is Resource.Success -> {
-                                    val slots = availableTimeslots.data ?: emptyList()
+                                    val slots = aState.data ?: emptyList()
                                     if (slots.isEmpty() && selectedDate.isNotEmpty()) {
                                         Text(
                                             text = "Dr. ${selectedDentist?.dentistName ?: doctorName} has no availability for the selected day.",
@@ -354,6 +361,7 @@ fun AppointmentBookingScreen(
                                         }
                                     }
                                 }
+                                else -> {}
                             }
                         }
                     }

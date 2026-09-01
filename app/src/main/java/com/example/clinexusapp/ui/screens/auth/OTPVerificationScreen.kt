@@ -18,8 +18,9 @@ import com.example.clinexusapp.viewmodel.OTPViewModel
 @Composable
 fun VerifyOTPScreen(
     email: String,
+    purpose: String = "verification",
     viewModel: OTPViewModel,
-    onOtpVerified: (String) -> Unit, // passes resetToken
+    onOtpVerified: (String?) -> Unit, // passes resetToken or null
     onNavigateBack: () -> Unit
 ) {
     var otp by remember { mutableStateOf("") }
@@ -27,12 +28,17 @@ fun VerifyOTPScreen(
     val resetToken by viewModel.resetToken.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(otpState) {
-        if (otpState is Resource.Success && resetToken != null) {
-            onOtpVerified(resetToken!!)
+    val state = otpState
+    LaunchedEffect(state) {
+        if (state is Resource.Success) {
+            if (purpose == "reset" && resetToken != null) {
+                onOtpVerified(resetToken)
+            } else if (purpose == "verification") {
+                onOtpVerified(null)
+            }
             viewModel.resetState()
-        } else if (otpState is Resource.Error) {
-            snackbarHostState.showSnackbar(otpState?.message ?: "Verification failed")
+        } else if (state is Resource.Error) {
+            snackbarHostState.showSnackbar(state.message ?: "Verification failed")
         }
     }
 
@@ -76,7 +82,13 @@ fun VerifyOTPScreen(
 
             VibrantButton(
                 text = if (otpState is Resource.Loading) "Verifying..." else "Verify OTP",
-                onClick = { viewModel.verifyOTP(email, otp) },
+                onClick = {
+                    if (purpose == "reset") {
+                        viewModel.verifyOTP(email, otp)
+                    } else {
+                        viewModel.verifyEmail(email, otp)
+                    }
+                },
                 enabled = otp.length == 6 && otpState !is Resource.Loading
             )
 

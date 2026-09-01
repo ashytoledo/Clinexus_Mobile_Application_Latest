@@ -10,15 +10,18 @@ import com.example.clinexusapp.util.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class LoginViewModel(private val repository: AuthRepository) : ViewModel() {
+@HiltViewModel
+class LoginViewModel @Inject constructor(private val repository: AuthRepository) : ViewModel() {
 
     private val _loginState = MutableStateFlow<Resource<LoginResponse>?>(null)
     val loginState = _loginState.asStateFlow()
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
-            _loginState.value = Resource.Loading()
+            _loginState.value = Resource.Loading
             val request = LoginRequest(email, password)
             val result = repository.login(request)
             

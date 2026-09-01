@@ -3,16 +3,12 @@ package com.example.clinexusapp.navigation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.clinexusapp.api.AddressRepository
-import com.example.clinexusapp.api.AppointmentRepository
-import com.example.clinexusapp.api.AuthRepository
-import com.example.clinexusapp.api.RetrofitClient
 import com.example.clinexusapp.ui.navigation.Screen
 import com.example.clinexusapp.ui.screens.appointments.AppointmentBookingScreen
 import com.example.clinexusapp.ui.screens.appointments.AppointmentHistoryScreen
@@ -28,11 +24,6 @@ import com.example.clinexusapp.viewmodel.*
 
 @Composable
 fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsViewModel) {
-    val repository = AuthRepository(RetrofitClient.instance)
-    val addressRepository = AddressRepository(RetrofitClient.addressInstance)
-    val appointmentRepository = AppointmentRepository(RetrofitClient.appointmentInstance)
-    val factory = ViewModelFactory(repository, addressRepository, appointmentRepository)
-
     NavHost(
         navController = navController,
         startDestination = Screen.Splash.route,
@@ -66,7 +57,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
             )
         }
         composable(route = Screen.Login.route) {
-            val loginViewModel: LoginViewModel = viewModel(factory = factory)
+            val loginViewModel: LoginViewModel = hiltViewModel()
             LoginScreen(
                 viewModel = loginViewModel,
                 onNavigateToRegister = {
@@ -83,7 +74,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
             )
         }
         composable(route = Screen.Register.route) {
-            val registerViewModel: RegisterViewModel = viewModel(factory = factory)
+            val registerViewModel: RegisterViewModel = hiltViewModel()
             RegisterScreen(
                 viewModel = registerViewModel,
                 onRegisterSuccess = { email ->
@@ -105,9 +96,10 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         ) { backStackEntry ->
             val email = backStackEntry.arguments?.getString("email") ?: ""
             val purpose = backStackEntry.arguments?.getString("purpose") ?: "verification"
-            val otpViewModel: OTPViewModel = viewModel(factory = factory)
+            val otpViewModel: OTPViewModel = hiltViewModel()
             VerifyOTPScreen(
                 email = email,
+                purpose = purpose,
                 viewModel = otpViewModel,
                 onOtpVerified = { resetToken ->
                     if (purpose == "reset") {
@@ -126,7 +118,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
 
         // ---- Forgot Password (Step 1) ----
         composable(route = Screen.ForgotPassword.route) {
-            val otpViewModel: OTPViewModel = viewModel(factory = factory)
+            val otpViewModel: OTPViewModel = hiltViewModel()
             ForgotPasswordScreen(
                 viewModel = otpViewModel,
                 onNavigateToOtp = { email ->
@@ -144,7 +136,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
             arguments = listOf(navArgument("resetToken") { type = NavType.StringType })
         ) { backStackEntry ->
             val resetToken = backStackEntry.arguments?.getString("resetToken") ?: ""
-            val otpViewModel: OTPViewModel = viewModel(factory = factory)
+            val otpViewModel: OTPViewModel = hiltViewModel()
             ResetPasswordScreen(
                 resetToken = resetToken,
                 viewModel = otpViewModel,
@@ -158,7 +150,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
 
         // ---- CHANGE PASSWORD (for logged‑in users) ----
         composable(route = Screen.ChangePassword.route) {
-            val otpViewModel: OTPViewModel = viewModel(factory = factory)
+            val otpViewModel: OTPViewModel = hiltViewModel()
             ChangePasswordScreen(
                 viewModel = otpViewModel,
                 onBack = { navController.popBackStack() },
@@ -185,7 +177,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
             })
         ) { backStackEntry ->
             val doctorName = backStackEntry.arguments?.getString("doctorName") ?: "Dr. Olivia Bennett"
-            val bookingViewModel: BookingViewModel = viewModel(factory = factory)
+            val bookingViewModel: BookingViewModel = hiltViewModel()
             AppointmentBookingScreen(
                 doctorName = doctorName,
                 onBack = { navController.popBackStack() },
@@ -199,7 +191,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         }
 
         composable(route = Screen.AppointmentHistory.route) {
-            val historyViewModel: HistoryViewModel = viewModel(factory = factory)
+            val historyViewModel: HistoryViewModel = hiltViewModel()
             AppointmentHistoryScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToBooking = {
@@ -210,7 +202,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         }
 
         composable(route = Screen.Chat.route) {
-            val chatViewModel: ChatViewModel = viewModel(factory = factory)
+            val chatViewModel: ChatViewModel = hiltViewModel()
             ChatScreen(
                 onBack = { navController.popBackStack() },
                 viewModel = chatViewModel
@@ -224,7 +216,7 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         }
 
         composable(route = Screen.PersonalInformation.route) {
-            val profileViewModel: ProfileViewModel = viewModel(factory = factory)
+            val profileViewModel: ProfileViewModel = hiltViewModel()
             PersonalInformationScreen(
                 onBack = { navController.popBackStack() },
                 viewModel = profileViewModel

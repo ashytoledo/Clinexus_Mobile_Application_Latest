@@ -174,7 +174,8 @@ fun AppointmentHistoryScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            when (val state = historyState) {
+            val state = historyState
+            when (state) {
                 is Resource.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -295,6 +296,7 @@ fun AppointmentHistoryScreen(
                         }
                     }
                 }
+                else -> {}
             }
         }
     }
