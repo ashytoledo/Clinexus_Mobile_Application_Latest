@@ -13,7 +13,7 @@ data class ForgotPasswordRequest(
 
 data class ResetPasswordRequest(
     @SerializedName("resetToken") val resetToken: String,
-    @SerializedName("password") val password: String
+    @SerializedName("newPassword") val password: String
 )
 
 
