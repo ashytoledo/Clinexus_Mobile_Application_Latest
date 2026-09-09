@@ -42,8 +42,8 @@ class OTPViewModel @Inject constructor(private val repository: AuthRepository) :
         viewModelScope.launch {
             _otpState.value = Resource.Loading
             val result = repository.verifyOTP(email, otp)
-            if (result is Resource.Success) {
-                _resetToken.value = result.data?.resetToken
+            (result as? Resource.Success)?.let {
+                _resetToken.value = it.data.resetToken ?: it.data.changePasswordToken
             }
             _otpState.value = result
         }
@@ -59,6 +59,7 @@ class OTPViewModel @Inject constructor(private val repository: AuthRepository) :
     // ---------- Change Password (logged in) ----------
     fun requestPasswordChange() {
         viewModelScope.launch {
+            _otpState.value = Resource.Idle
             _otpState.value = Resource.Loading
             _otpState.value = repository.requestPasswordChange()
         }
@@ -66,10 +67,11 @@ class OTPViewModel @Inject constructor(private val repository: AuthRepository) :
 
     fun verifyPasswordChangeOTP(otp: String) {
         viewModelScope.launch {
+            _otpState.value = Resource.Idle
             _otpState.value = Resource.Loading
             val result = repository.verifyPasswordChangeOTP(otp)
-            if (result is Resource.Success) {
-                _resetToken.value = result.data?.changePasswordToken
+            (result as? Resource.Success)?.let {
+                _resetToken.value = it.data.changePasswordToken ?: it.data.resetToken
             }
             _otpState.value = result
         }
@@ -82,12 +84,8 @@ class OTPViewModel @Inject constructor(private val repository: AuthRepository) :
         }
     }
 
-    // Helper: resend OTP (re‑uses forgotPassword – you can add a dedicated endpoint later)
-    fun resendOtp(email: String) {
-        viewModelScope.launch {
-            _otpState.value = Resource.Loading
-            _otpState.value = repository.forgotPassword(email)
-        }
+    fun resetOtpState() {
+        _otpState.value = null
     }
 
     fun resetState() {

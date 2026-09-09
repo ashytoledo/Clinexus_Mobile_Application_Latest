@@ -28,13 +28,13 @@ import com.example.clinexusapp.ui.screens.profile.ProfileScreen
 import com.example.clinexusapp.ui.screens.appointments.AppointmentHistoryScreen
 import com.example.clinexusapp.util.SessionManager
 import com.example.clinexusapp.viewmodel.*
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 
 @Composable
 fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER") settingsViewModel: SettingsViewModel) {
     val navController = rememberNavController()
-    var isBottomBarVisible by remember { mutableStateOf(true) }
+    var isBottomBarVisible by remember { mutableStateOf(value = true) }
 
     Scaffold(
         bottomBar = { 
@@ -51,15 +51,22 @@ fun MainScreen(rootNavController: NavHostController, @Suppress("UNUSED_PARAMETER
         ) {
             composable(route = Screen.Dashboard.route) {
                 val dashboardViewModel: DashboardViewModel = hiltViewModel()
-                DashboardScreen(dashboardViewModel, rootNavController)
+                DashboardScreen(
+                    viewModel = dashboardViewModel,
+                    rootNavController = rootNavController,
+                    onNotificationClick = {
+                        rootNavController.navigate(Screen.Notifications.route)
+                    },
+                )
             }
             composable(route = Screen.Chat.route) {
                 val chatViewModel: ChatViewModel = hiltViewModel()
                 ChatScreen(
                     onBack = { navController.popBackStack() }, 
                     viewModel = chatViewModel,
-                    onVisibilityChange = { isBottomBarVisible = it }
-                )
+                ) {
+                    isBottomBarVisible = it
+                }
             }
             composable(route = Screen.AppointmentHistory.route) {
                 val historyViewModel: HistoryViewModel = hiltViewModel()
@@ -107,7 +114,7 @@ fun TealBottomBar(navController: NavHostController) {
         BottomBarScreen.Dashboard,
         BottomBarScreen.Appointments,
         BottomBarScreen.Chat,
-        BottomBarScreen.Profile
+        BottomBarScreen.Profile,
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination

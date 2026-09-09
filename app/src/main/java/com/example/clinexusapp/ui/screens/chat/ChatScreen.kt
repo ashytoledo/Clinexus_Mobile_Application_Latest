@@ -21,18 +21,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -45,17 +39,14 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.example.clinexusapp.R
 import com.example.clinexusapp.model.*
 import com.example.clinexusapp.ui.components.ElegantTopAppBar
-import com.example.clinexusapp.ui.components.VibrantButton
 import com.example.clinexusapp.ui.theme.*
 import com.example.clinexusapp.util.DateUtils
 import com.example.clinexusapp.util.Resource
-import com.example.clinexusapp.util.SessionManager
 import com.example.clinexusapp.viewmodel.ChatViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -68,7 +59,7 @@ import java.io.FileOutputStream
 fun ChatScreen(
     onBack: () -> Unit, 
     viewModel: ChatViewModel,
-    onVisibilityChange: (Boolean) -> Unit = {}
+    onVisibilityChange: (Boolean) -> Unit = {},
 ) {
     var messageText by remember { mutableStateOf("") }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
@@ -103,7 +94,7 @@ fun ChatScreen(
                 val size = c.getLong(sizeIndex)
                 
                 // 10MB limit (10 * 1024 * 1024 bytes)
-                if (size > 10 * 1024 * 1024) {
+                if (size > (10 * 1024 * 1024)) {
                     Toast.makeText(context, "File size exceeds 10MB limit", Toast.LENGTH_LONG).show()
                 } else {
                     selectedFileUri = it
@@ -237,8 +228,7 @@ fun ChatScreen(
             when (currentView) {
                 ChatView.CONVERSATIONS -> {
                     Box(modifier = Modifier.weight(1f)) {
-                        val convState = conversationsState
-                        when (convState) {
+                        when (val convState = conversationsState) {
                             is Resource.Loading -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     CircularProgressIndicator(color = VibrantTeal)
@@ -277,8 +267,7 @@ fun ChatScreen(
                 }
                 ChatView.CONTACTS -> {
                     Box(modifier = Modifier.weight(1f)) {
-                        val cState = contactsState
-                        when (cState) {
+                        when (val cState = contactsState) {
                             is Resource.Loading -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     CircularProgressIndicator(color = VibrantTeal)
@@ -327,12 +316,11 @@ fun ChatScreen(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     ChatAvatar(imageUrl = chatPartnerProfilePicture, name = chatPartnerName, size = 80.dp, fontSize = 32.sp)
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    Text(text = "iMessage with $chatPartnerName", color = SlateGray, fontSize = 13.sp)
+                                    Text(text = "Message with $chatPartnerName", color = SlateGray, fontSize = 13.sp)
                                 }
                             }
                         } else {
-                            val messagesState = conversationMessagesState
-                            when (messagesState) {
+                            when (val messagesState = conversationMessagesState) {
                                 is Resource.Loading -> {
                                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                         CircularProgressIndicator(color = VibrantTeal)
@@ -509,6 +497,7 @@ enum class ChatView { CONVERSATIONS, CONTACTS, MESSAGES }
 
 fun getInitials(name: String): String {
     return name.split(" ")
+        .asSequence()
         .filter { it.isNotEmpty() }
         .mapNotNull { it.firstOrNull()?.uppercase() }
         .take(2)
@@ -687,7 +676,7 @@ fun AttachmentBox(
         if (isImage && fileUrl != null) {
             ImageRequest.Builder(context)
                 .data(fileUrl)
-                .crossfade(true)
+                .crossfade(enable = true)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build()
@@ -735,7 +724,7 @@ fun AttachmentBox(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(20.dp))
-                        .clickable { (downloadUrl ?: fileUrl)?.let { uriHandler.openUri(it) } },
+                        .clickable { (downloadUrl ?: fileUrl).let { uriHandler.openUri(it) } },
                     contentScale = ContentScale.Fit,
                     placeholder = painterResource(R.drawable.ic_image_placeholder),
                     error = painterResource(R.drawable.ic_image_placeholder)

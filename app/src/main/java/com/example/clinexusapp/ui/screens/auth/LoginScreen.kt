@@ -21,7 +21,7 @@ fun LoginScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    onNavigateToForgotPassword: () -> Unit
+    onNavigateToForgotPassword: () -> Unit,
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -31,17 +31,21 @@ fun LoginScreen(
 
     val state = loginState
     LaunchedEffect(state) {
-        if (state is Resource.Success) {
-            onLoginSuccess()
-            viewModel.resetState()
-        } else if (state is Resource.Error) {
-            snackbarHostState.showSnackbar(state.message ?: "Login failed")
+        when (state) {
+            is Resource.Success -> {
+                onLoginSuccess()
+                viewModel.resetState()
+            }
+            is Resource.Error -> {
+                snackbarHostState.showSnackbar(state.message ?: "Login failed")
+            }
+            else -> {}
         }
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier = Modifier

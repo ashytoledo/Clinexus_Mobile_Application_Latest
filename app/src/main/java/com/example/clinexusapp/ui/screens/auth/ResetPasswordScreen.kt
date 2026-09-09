@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 fun ResetPasswordScreen(
     resetToken: String,
     viewModel: OTPViewModel,
-    onResetSuccess: () -> Unit
+    onResetSuccess: () -> Unit,
 ) {
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -30,19 +30,23 @@ fun ResetPasswordScreen(
 
     val state = otpState
     LaunchedEffect(state) {
-        if (state is Resource.Success) {
-            onResetSuccess()
-            viewModel.resetState()
-        } else if (state is Resource.Error) {
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar(state.message ?: "Reset failed")
+        when (state) {
+            is Resource.Success -> {
+                onResetSuccess()
+                viewModel.resetState()
             }
+            is Resource.Error -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(state.message ?: "Reset failed")
+                }
+            }
+            else -> {}
         }
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -98,9 +102,9 @@ fun ResetPasswordScreen(
                         }
                     }
                 },
-                enabled = newPassword.isNotEmpty() &&
-                        newPassword == confirmPassword &&
-                        otpState !is Resource.Loading
+                enabled = (newPassword.isNotEmpty()) &&
+                        (newPassword == confirmPassword) &&
+                        (otpState !is Resource.Loading)
             )
         }
     }

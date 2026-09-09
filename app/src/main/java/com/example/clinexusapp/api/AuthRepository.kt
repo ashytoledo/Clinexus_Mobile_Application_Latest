@@ -21,6 +21,22 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
     private fun String.toPart(): RequestBody =
         this.toRequestBody("text/plain".toMediaTypeOrNull())
 
+    private fun getCleanToken(): String? {
+        val raw = SessionManager.token?.trim() ?: return null
+        // Sanitize token: Remove surrounding quotes if they exist (common with JSON strings)
+        val sanitized = raw.replace("\"", "").trim()
+        return if (sanitized.startsWith("Bearer ", ignoreCase = true)) {
+            sanitized.substring(7).trim()
+        } else {
+            sanitized
+        }
+    }
+
+    private fun getAuthorizationHeader(): String? {
+        val clean = getCleanToken() ?: return null
+        return "Bearer $clean"
+    }
+
     // ---------- LOGIN ----------
     suspend fun login(request: LoginRequest): Resource<LoginResponse> {
         return try {
@@ -80,10 +96,10 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
             val response = apiService.verifyEmail(request)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
-                if (body.success == true) {
-                    Resource.Success(body)
-                } else {
+                if (body.success == false) {
                     Resource.Error(body.message ?: "OTP verification failed")
+                } else {
+                    Resource.Success(body)
                 }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
@@ -100,10 +116,10 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
             val response = apiService.verifyOTP(request)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
-                if (body.success == true) {
-                    Resource.Success(body)
-                } else {
+                if (body.success == false) {
                     Resource.Error(body.message ?: "OTP verification failed")
+                } else {
+                    Resource.Success(body)
                 }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
@@ -130,13 +146,13 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
             Log.d("FORGOT_PASSWORD", "HTTP Code: ${response.code()}")
             Log.d("FORGOT_PASSWORD", "Successful: ${response.isSuccessful}")
             Log.d("FORGOT_PASSWORD", "Response: ${response.body()}")
-            
+
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
-                if (body.success == true) {
-                    Resource.Success(body)
-                } else {
+                if (body.success == false) {
                     Resource.Error(body.message ?: "Failed to send reset code")
+                } else {
+                    Resource.Success(body)
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
@@ -169,14 +185,15 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
     // ---------- RESET PASSWORD ----------
     suspend fun resetPassword(resetToken: String, newPassword: String): Resource<GenericResponse> {
         return try {
-            val request = ResetPasswordRequest(resetToken, newPassword)
+            val cleanResetToken = resetToken.replace("\"", "").trim()
+            val request = ResetPasswordRequest(cleanResetToken, newPassword)
             val response = apiService.resetPassword(request)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
-                if (body.success == true) {
-                    Resource.Success(body)
-                } else {
+                if (body.success == false) {
                     Resource.Error(body.message ?: "Password reset failed")
+                } else {
+                    Resource.Success(body)
                 }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "Password reset failed")
@@ -189,14 +206,14 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
     // ---------- PASSWORD CHANGE (authenticated) ----------
     suspend fun requestPasswordChange(): Resource<GenericResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.requestPasswordChange("Bearer $token")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.requestPasswordChange(token)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
-                if (body.success == true) {
-                    Resource.Success(body)
-                } else {
+                if (body.success == false) {
                     Resource.Error(body.message ?: "Password change request failed")
+                } else {
+                    Resource.Success(body)
                 }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "Password change request failed")
@@ -208,15 +225,15 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
 
     suspend fun verifyPasswordChangeOTP(otp: String): Resource<GenericResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
             val request = VerifyPasswordChangeOtpRequest(otp)
-            val response = apiService.verifyPasswordChangeOTP("Bearer $token", request)
+            val response = apiService.verifyPasswordChangeOTP(token, request)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
-                if (body.success == true) {
-                    Resource.Success(body)
-                } else {
+                if (body.success == false) {
                     Resource.Error(body.message ?: "OTP verification failed")
+                } else {
+                    Resource.Success(body)
                 }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "OTP verification failed")
@@ -228,15 +245,16 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
 
     suspend fun changePassword(changePasswordToken: String, newPassword: String): Resource<GenericResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val request = ChangePasswordRequest(changePasswordToken, newPassword)
-            val response = apiService.changePatientPassword("Bearer $token", request)
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val cleanChangeToken = changePasswordToken.replace("\"", "").trim()
+            val request = ChangePasswordRequest(cleanChangeToken, newPassword)
+            val response = apiService.changePatientPassword(token, request)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
-                if (body.success == true) {
-                    Resource.Success(body)
-                } else {
+                if (body.success == false) {
                     Resource.Error(body.message ?: "Password change failed")
+                } else {
+                    Resource.Success(body)
                 }
             } else {
                 Resource.Error(parseError(response.errorBody()?.string()) ?: "Password change failed")
@@ -249,8 +267,8 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
     // ---------- PROFILE ----------
     suspend fun getPatientProfile(): Resource<PatientInfo> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getPatientProfile("Bearer $token")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.getPatientProfile(token)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
@@ -261,12 +279,54 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
         }
     }
 
+    suspend fun getNotifications(): Resource<List<NotificationDTO>> {
+        return try {
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.getNotifications(token)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "Failed to fetch notifications")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to fetch notifications")
+        }
+    }
+
+    suspend fun markNotificationAsRead(notificationId: Int): Resource<GenericResponse> {
+        return try {
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.markNotificationAsRead(token, notificationId)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "Failed to mark notification as read")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to mark notification as read")
+        }
+    }
+
+    suspend fun markAllNotificationsAsRead(): Resource<GenericResponse> {
+        return try {
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.markAllNotificationsAsRead(token)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(parseError(response.errorBody()?.string()) ?: "Failed to mark notifications as read")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to mark notifications as read")
+        }
+    }
+
     suspend fun updatePatientProfile(
         request: UpdateProfileRequest,
         file: MultipartBody.Part? = null
     ): Resource<GenericResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
 
             // Sanitize inputs
             val cleanPhone = request.phoneNumber.replace(Regex("[^0-9]"), "")
@@ -284,7 +344,7 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
             Log.d("AuthRepository", "Date: $cleanDate, Phone: $cleanPhone")
 
             val response = apiService.updatePatientAccount(
-                token = "Bearer $token",
+                token = token,
                 email = request.email.toPart(),
                 firstName = request.firstName.toPart(),
                 middleName = middlePart,
@@ -321,8 +381,8 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
     // ---------- APPOINTMENTS ----------
     suspend fun getAppointmentHistory(): Resource<List<AppointmentDTO>> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getAppointmentHistory("Bearer $token")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.getAppointmentHistory(token)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
@@ -336,8 +396,8 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
     // ---------- CHAT ----------
     suspend fun getConversations(): Resource<List<ConversationDTO>> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getConversations("Bearer $token")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.getConversations(token)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
@@ -350,8 +410,8 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
 
     suspend fun getAvailableContacts(): Resource<List<ContactDTO>> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getAvailableContacts("Bearer $token")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.getAvailableContacts(token)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
@@ -380,8 +440,8 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
 
     suspend fun getConversationMessages(conversationID: Int): Resource<ConversationMessagesResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getConversationMessages("Bearer $token", conversationID)
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.getConversationMessages(token, conversationID)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
@@ -394,9 +454,9 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
 
     suspend fun markConversationAsRead(conversationID: Int, lastMessageId: Int): Resource<Unit> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
             val request = MarkReadRequest(lastMessageId)
-            val response = apiService.markConversationAsRead("Bearer $token", conversationID, request)
+            val response = apiService.markConversationAsRead(token, conversationID, request)
             if (response.isSuccessful) {
                 Resource.Success(Unit)
             } else {
@@ -415,13 +475,13 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
         attachmentPart: MultipartBody.Part? = null
     ): Resource<SendMessageResponse> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
             val typePart = receiverAccountType.toPart()
             val idPart = receiverAccountID.toString().toPart()
             val contentPart = messageContent.toPart()
             val convPart = conversationID?.toString()?.toPart()
 
-            val response = apiService.sendMessage("Bearer $token", typePart, idPart, contentPart, convPart, attachmentPart)
+            val response = apiService.sendMessage(token, typePart, idPart, contentPart, convPart, attachmentPart)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
@@ -435,8 +495,8 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
     // ---------- CLINIC NEWS ----------
     suspend fun getClinicNews(): Resource<List<ClinicNewsDTO>> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getClinicNews("Bearer $token")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.getClinicNews(token)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
@@ -450,8 +510,8 @@ class AuthRepository @Inject constructor(private val apiService: ApiService) {
     // ---------- HEALTH INSIGHTS ----------
     suspend fun getHealthInsights(): Resource<List<HealthInsightDTO>> {
         return try {
-            val token = SessionManager.token ?: return Resource.Error("Not authenticated")
-            val response = apiService.getHealthInsights("Bearer $token")
+            val token = getAuthorizationHeader() ?: return Resource.Error("Not authenticated")
+            val response = apiService.getHealthInsights(token)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {

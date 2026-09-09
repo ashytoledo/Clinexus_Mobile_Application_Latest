@@ -1,115 +1,242 @@
 package com.example.clinexusapp.api
 
+import android.util.Log
 import com.example.clinexusapp.model.*
 import com.example.clinexusapp.util.Resource
 import com.example.clinexusapp.util.SessionManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import retrofit2.Response
-import java.text.SimpleDateFormat
-import java.util.*
-import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class AppointmentRepository @Inject constructor(
-    private val apiService: AppointmentApiService,
+    private val apiService: AppointmentApiService
 ) {
 
-
-    private fun getCleanToken(): String? {
-        val raw = SessionManager.token?.trim() ?: return null
-        return if (raw.startsWith("Bearer ", ignoreCase = true)) {
-            raw.substring(7).trim()
-        } else {
-            raw
-        }
+    companion object {
+        private const val TAG = "AppointmentRepository"
     }
 
+    /**
+     * Gets the currently stored JWT and guarantees
+     * exactly one "Bearer " prefix.
+     */
     private fun getAuthorizationHeader(): String? {
-        val clean = getCleanToken() ?: return null
-        return "Bearer $clean"
+
+        val rawToken =
+            SessionManager.token?.trim()
+                ?: return null
+
+        if (rawToken.isEmpty()) {
+            return null
+        }
+
+        val cleanToken =
+            if (
+                rawToken.startsWith(
+                    "Bearer ",
+                    ignoreCase = true
+                )
+            ) {
+                rawToken
+                    .substring(7)
+                    .trim()
+            } else {
+                rawToken
+            }
+
+        if (cleanToken.isEmpty()) {
+            return null
+        }
+
+        return "Bearer $cleanToken"
     }
 
+
+    /**
+     * Reads backend error messages.
+     */
     private fun <T> handleError(
         response: Response<*>,
-        defaultMessage: String,
+        defaultMessage: String
     ): Resource<T> {
 
-        val errorBodyString =
-            response.errorBody()?.string() ?: ""
+        val errorBody =
+            try {
+                response.errorBody()?.string()
+                    ?: ""
+            } catch (e: Exception) {
+                ""
+            }
 
-        var serverMessage = defaultMessage
+        Log.e(
+            TAG,
+            "HTTP ${response.code()} error body: $errorBody"
+        )
 
-        if (errorBodyString.isNotEmpty()) {
+        var serverMessage =
+            defaultMessage
+
+        if (
+            errorBody.isNotBlank() &&
+            errorBody.trim().startsWith("{")
+        ) {
 
             try {
 
                 val type =
-                    object : TypeToken<Map<String, Any>>() {}.type
+                    object :
+                        TypeToken<Map<String, Any>>() {}.type
 
-                val errorMap: Map<String, Any> =
+                val map:
+                        Map<String, Any> =
                     Gson().fromJson(
-                        errorBodyString,
-                        type,
+                        errorBody,
+                        type
                     )
 
                 serverMessage =
-                    errorMap["message"]?.toString()
-                        ?: errorMap["error"]?.toString()
+                    map["message"]?.toString()
+                        ?: map["error"]?.toString()
                                 ?: defaultMessage
 
-            } catch (_: Exception) {
-                // Keep default message
+            } catch (e: Exception) {
+
+                Log.e(
+                    TAG,
+                    "Unable to parse server error",
+                    e
+                )
             }
         }
 
-        val errorMessage = when (response.code()) {
+        val message =
+            when (response.code()) {
 
-            400 ->
-                "Bad Request (400): $serverMessage"
+                400 ->
+                    "Bad Request (400): $serverMessage"
 
-            401 ->
-                "Unauthorized (401): $serverMessage. Please login again."
+                401 ->
+                    "Unauthorized (401): $serverMessage. Please login again."
 
-            403 ->
-                "Forbidden (403): $serverMessage. Your authentication token is invalid or expired."
+                403 ->
+                    "Forbidden (403): $serverMessage. Your session may have expired."
 
-            404 ->
-                "Route not found (404): $serverMessage"
+                404 ->
+                    "Not Found (404): $serverMessage"
 
-            500 ->
-                "Server Error (500): $serverMessage"
+                500 ->
+                    "Server Error (500): $serverMessage"
 
-            else ->
-                "Error ${response.code()}: $serverMessage"
-        }
+                502 ->
+                    "Server temporarily unavailable (502)."
 
-        return Resource.Error(errorMessage)
+                503 ->
+                    "Server temporarily unavailable (503)."
+
+                else ->
+                    "Error ${response.code()}: $serverMessage"
+            }
+
+        Log.e(
+            TAG,
+            message
+        )
+
+        return Resource.Error(
+            message
+        )
     }
 
 
-    suspend fun getActiveDentists(): Resource<List<DentistDTO>> {
+    // ============================================================
+    // ACTIVE DENTISTS
+    // ============================================================
+
+    suspend fun getActiveDentists():
+            Resource<List<DentistDTO>> {
 
         return try {
 
-            val token = getAuthorizationHeader()
+            val token =
+                getAuthorizationHeader()
 
-                ?: return Resource.Error(
-                    "Not authenticated. Please login again.",
+            if (token == null) {
+
+                Log.e(
+                    TAG,
+                    "getActiveDentists: Token not found"
                 )
 
-            val rawToken = SessionManager.token ?: ""
+                return Resource.Error(
+                    "Authentication token not found. Please log in again."
+                )
+            }
+
+            Log.d(
+                TAG,
+                "GET /api/active-dentists"
+            )
+
+            Log.d(
+                TAG,
+                "Authorization header available"
+            )
 
             val response =
-                apiService.getActiveDentists(rawToken, token)
+                apiService
+                    .getActiveDentists(
+                        token
+                    )
 
-            if (response.isSuccessful) {
+            Log.d(
+                TAG,
+                "Dentist HTTP code: ${response.code()}"
+            )
 
-                Resource.Success(
-                    response.body() ?: emptyList(),
+            Log.d(
+                TAG,
+                "Dentist HTTP message: ${response.message()}"
+            )
+
+            if (
+                response.isSuccessful
+            ) {
+
+                val dentists = response.body()?.dentists?.map { dentist ->
+                    DentistDTO(
+                        dentistId = dentist.dentistId,
+                        dentistName = dentist.dentistName,
+                        specializationName = dentist.specialization,
+                        profileImage = dentist.profileImage,
+                        daysOfWeek = dentist.daysOfWeek
+                    )
+                }
+
+                Log.d(
+                    TAG,
+                    "Dentist response: $dentists"
                 )
+
+                if (dentists != null && response.body()?.success == true) {
+
+                    Log.d(
+                        TAG,
+                        "Received ${dentists.size} dentists"
+                    )
+
+                    Resource.Success(
+                        dentists
+                    )
+
+                } else {
+
+                    Resource.Error(
+                        "Dentist response was empty."
+                    )
+                }
 
             } else {
 
@@ -119,53 +246,149 @@ class AppointmentRepository @Inject constructor(
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (
+            e: java.net.UnknownHostException
+        ) {
+
+            Log.e(
+                TAG,
+                "Cannot connect to server",
+                e
+            )
 
             Resource.Error(
-                e.message
-                    ?: "An error occurred while loading dentists."
+                "Cannot connect to server. Check your internet connection."
+            )
+
+        } catch (
+            e: java.net.SocketTimeoutException
+        ) {
+
+            Log.e(
+                TAG,
+                "Dentist request timed out",
+                e
+            )
+
+            Resource.Error(
+                "Server took too long to respond. Please try again."
+            )
+
+        } catch (
+            e: Exception
+        ) {
+
+            Log.e(
+                TAG,
+                "Error fetching dentists",
+                e
+            )
+
+            Resource.Error(
+                e.localizedMessage
+                    ?: "Network error while fetching dentists."
             )
         }
     }
 
 
-    suspend fun getDentistSchedule(dentistId: Int): Resource<DentistScheduleDTO> {
+    // ============================================================
+    // DENTIST SCHEDULE
+    // ============================================================
+
+    suspend fun getDentistSchedule(
+        dentistId: Int
+    ): Resource<DentistScheduleDTO> {
+
         return try {
-            val token = getAuthorizationHeader()
-                ?: return Resource.Error("Not authenticated. Please login again.")
 
-            val response = apiService.getDentistSchedule(token, dentistId)
+            val token =
+                getAuthorizationHeader()
+                    ?: return Resource.Error(
+                        "Not authenticated."
+                    )
 
-            if (response.isSuccessful) {
-                Resource.Success(response.body()!!)
+            val response =
+                apiService
+                    .getDentistSchedule(
+                        token,
+                        dentistId
+                    )
+
+            if (
+                response.isSuccessful
+            ) {
+
+                val body =
+                    response.body()
+
+                if (body != null) {
+
+                    Resource.Success(
+                        body
+                    )
+
+                } else {
+
+                    Resource.Error(
+                        "Empty schedule response."
+                    )
+                }
+
             } else {
-                handleError(response, "Failed to fetch dentist schedule")
+
+                handleError(
+                    response,
+                    "Failed to fetch schedule"
+                )
             }
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "An error occurred while loading schedule.")
+
+        } catch (
+            e: Exception
+        ) {
+
+            Log.e(
+                TAG,
+                "Error fetching dentist schedule",
+                e
+            )
+
+            Resource.Error(
+                e.localizedMessage
+                    ?: "Network error while fetching dentist schedule."
+            )
         }
     }
 
 
+    // ============================================================
+    // SERVICES
+    // ============================================================
 
     suspend fun getBookableServices():
             Resource<List<BookableServiceDTO>> {
 
         return try {
 
-            val token = getAuthorizationHeader()
-
-                ?: return Resource.Error(
-                    "Not authenticated. Please login again.",
-                )
+            val token =
+                getAuthorizationHeader()
+                    ?: return Resource.Error(
+                        "Authentication token not found. Please log in again."
+                    )
 
             val response =
-                apiService.getBookableServices(token)
+                apiService
+                    .getBookableServices(
+                        token
+                    )
 
-            if (response.isSuccessful) {
+            if (
+                response.isSuccessful
+            ) {
 
                 Resource.Success(
-                    response.body() ?: emptyList(),
+                    response.body()
+                        ?: emptyList()
                 )
 
             } else {
@@ -176,51 +399,42 @@ class AppointmentRepository @Inject constructor(
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (
+            e: Exception
+        ) {
+
+            Log.e(
+                TAG,
+                "Error fetching services",
+                e
+            )
 
             Resource.Error(
-                e.message
-                    ?: "An error occurred while loading services."
+                e.localizedMessage
+                    ?: "Network error while fetching services."
             )
         }
     }
 
-
-
-    suspend fun getPatientAppointments():
-            Resource<List<AppointmentDTO>> {
-
+    suspend fun getActivePromotions(): Resource<List<PromotionDTO>> {
         return try {
-
             val token = getAuthorizationHeader()
-
-                ?: return Resource.Error(
-                    "Not authenticated. Please login again.",
-                )
-
-            val response = apiService.getPatientAppointments(token)
-
-            if (response.isSuccessful) {
-                // ✅ Extract the wrapper, then get the list from it
-                val wrapper = response.body()
-                val allAppointments = wrapper?.appointments ?: emptyList()
-
-                Log.d("AppointmentRepo", "Fetched appointments: $allAppointments")
-                Resource.Success(allAppointments)   // ← Pass the LIST, not the wrapper
-
+                ?: return Resource.Error("Not authenticated.")
+            val response = apiService.getActivePromotions(token)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Resource.Success(response.body()?.promotions.orEmpty())
             } else {
-                handleError(response, "Failed to fetch appointments")
+                handleError(response, "Failed to fetch promotions")
             }
-
         } catch (e: Exception) {
-
-            Resource.Error(
-                e.message
-                    ?: "An error occurred while loading appointments."
-            )
+            Resource.Error(e.localizedMessage ?: "Network error while fetching promotions.")
         }
     }
 
+
+    // ============================================================
+    // AVAILABLE TIMESLOTS
+    // ============================================================
 
     suspend fun getAvailableTimeslots(
         dentistId: Int,
@@ -229,53 +443,31 @@ class AppointmentRepository @Inject constructor(
 
         return try {
 
-            val token = getAuthorizationHeader()
-
-                ?: return Resource.Error(
-                    "Not authenticated. Please login again.",
-                )
+            val token =
+                getAuthorizationHeader()
+                    ?: return Resource.Error(
+                        "Not authenticated."
+                    )
 
             val response =
-                apiService.getAvailableTimeslots(
-                    token,
-                    dentistId,
-                    date
-                )
-
-            if (response.isSuccessful) {
-
-                val timeStrings = response.body()?.availableTimeslots ?: emptyList()
-                val sdf24 = SimpleDateFormat("HH:mm", Locale.getDefault())
-                val sdf12 = SimpleDateFormat("hh:mm a", Locale.getDefault())
-
-                val slots = timeStrings.map { startTime ->
-                    val label = try {
-                        val date = sdf24.parse(startTime)
-                        if (date != null) sdf12.format(date) else startTime
-                    } catch (_: Exception) {
-                        startTime
-                    }
-
-                    val endTime = try {
-                        val date = sdf24.parse(startTime)
-                        if (date != null) {
-                            val cal = Calendar.getInstance()
-                            cal.time = date
-                            cal.add(Calendar.HOUR_OF_DAY, 1)
-                            sdf24.format(cal.time)
-                        } else startTime
-                    } catch (_: Exception) {
-                        startTime
-                    }
-
-                    AvailableSlotDTO(
-                        label = label,
-                        startTime = startTime,
-                        endTime = endTime
+                apiService
+                    .getAvailableTimeslots(
+                        token = token,
+                        dentistId = dentistId,
+                        appointmentDate = date
                     )
-                }
 
-                Resource.Success(slots)
+            if (
+                response.isSuccessful
+            ) {
+
+                val body =
+                    response.body()
+
+                Resource.Success(
+                    body?.availableSlots
+                        ?: emptyList()
+                )
 
             } else {
 
@@ -285,15 +477,27 @@ class AppointmentRepository @Inject constructor(
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (
+            e: Exception
+        ) {
+
+            Log.e(
+                TAG,
+                "Error fetching timeslots",
+                e
+            )
 
             Resource.Error(
-                e.message
-                    ?: "An error occurred while loading timeslots."
+                e.localizedMessage
+                    ?: "Network error while fetching timeslots."
             )
         }
     }
 
+
+    // ============================================================
+    // CREATE APPOINTMENT
+    // ============================================================
 
     suspend fun createAppointment(
         request: CreateAppointmentRequest
@@ -301,30 +505,36 @@ class AppointmentRepository @Inject constructor(
 
         return try {
 
-            val token = getAuthorizationHeader()
-
-                ?: return Resource.Error(
-                    "Not authenticated. Please login again.",
-                )
+            val token =
+                getAuthorizationHeader()
+                    ?: return Resource.Error(
+                        "Not authenticated."
+                    )
 
             val response =
-                apiService.createAppointment(
-                    token,
-                    request
-                )
+                apiService
+                    .createAppointment(
+                        token,
+                        request
+                    )
 
-            if (response.isSuccessful) {
+            if (
+                response.isSuccessful
+            ) {
 
-                val body = response.body()
+                val body =
+                    response.body()
 
                 if (body != null) {
 
-                    Resource.Success(body)
+                    Resource.Success(
+                        body
+                    )
 
                 } else {
 
                     Resource.Error(
-                        "Server returned an empty response."
+                        "Empty appointment response."
                     )
                 }
 
@@ -332,52 +542,127 @@ class AppointmentRepository @Inject constructor(
 
                 handleError(
                     response,
-                    "Failed to create appointment"
+                    "Booking failed"
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (
+            e: Exception
+        ) {
+
+            Log.e(
+                TAG,
+                "Error creating appointment",
+                e
+            )
 
             Resource.Error(
-                e.message
-                    ?: "An error occurred while creating appointment."
+                e.localizedMessage
+                    ?: "Network error while creating appointment."
             )
         }
     }
 
 
+    // ============================================================
+    // PATIENT APPOINTMENTS
+    // ============================================================
+
+    suspend fun getPatientAppointments():
+            Resource<List<AppointmentDTO>> {
+
+        return try {
+
+            val token =
+                getAuthorizationHeader()
+                    ?: return Resource.Error(
+                        "Not authenticated."
+                    )
+
+            val response =
+                apiService
+                    .getPatientAppointments(
+                        token
+                    )
+
+            if (
+                response.isSuccessful
+            ) {
+
+                Resource.Success(
+                    response.body()
+                        ?.appointments
+                        ?: emptyList()
+                )
+
+            } else {
+
+                handleError(
+                    response,
+                    "Failed to fetch appointments"
+                )
+            }
+
+        } catch (
+            e: Exception
+        ) {
+
+            Log.e(
+                TAG,
+                "Error fetching appointments",
+                e
+            )
+
+            Resource.Error(
+                e.localizedMessage
+                    ?: "Network error while fetching appointments."
+            )
+        }
+    }
+
+
+    // ============================================================
+    // RESCHEDULE
+    // ============================================================
+
     suspend fun rescheduleAppointment(
         appointmentId: Int,
-        request: RescheduleRequest
+        request: RescheduleAppointmentRequest
     ): Resource<GenericResponse> {
 
         return try {
 
-            val token = getAuthorizationHeader()
-
-                ?: return Resource.Error(
-                    "Not authenticated. Please login again.",
-                )
+            val token =
+                getAuthorizationHeader()
+                    ?: return Resource.Error(
+                        "Not authenticated."
+                    )
 
             val response =
-                apiService.requestReschedule(
-                    token,
-                    appointmentId,
-                    request
-                )
+                apiService
+                    .requestReschedule(
+                        token = token,
+                        appointmentId = appointmentId,
+                        request = request
+                    )
 
-            if (response.isSuccessful) {
+            if (
+                response.isSuccessful
+            ) {
 
-                val body = response.body()
+                val body =
+                    response.body()
 
                 if (body != null) {
 
-                    Resource.Success(body)
+                    Resource.Success(
+                        body
+                    )
 
                 } else {
 
                     Resource.Error(
-                        "Server returned an empty response."
+                        "Empty response."
                     )
                 }
 
@@ -389,15 +674,27 @@ class AppointmentRepository @Inject constructor(
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (
+            e: Exception
+        ) {
+
+            Log.e(
+                TAG,
+                "Error requesting reschedule",
+                e
+            )
 
             Resource.Error(
-                e.message
-                    ?: "An error occurred while rescheduling."
+                e.localizedMessage
+                    ?: "Network error while requesting reschedule."
             )
         }
     }
 
+
+    // ============================================================
+    // CANCEL
+    // ============================================================
 
     suspend fun cancelAppointment(
         appointmentId: Int,
@@ -406,31 +703,37 @@ class AppointmentRepository @Inject constructor(
 
         return try {
 
-            val token = getAuthorizationHeader()
-
-                ?: return Resource.Error(
-                    "Not authenticated. Please login again.",
-                )
+            val token =
+                getAuthorizationHeader()
+                    ?: return Resource.Error(
+                        "Not authenticated."
+                    )
 
             val response =
-                apiService.requestCancelAppointment(
-                    token,
-                    appointmentId,
-                    request
-                )
+                apiService
+                    .requestCancelAppointment(
+                        token = token,
+                        appointmentId = appointmentId,
+                        request = request
+                    )
 
-            if (response.isSuccessful) {
+            if (
+                response.isSuccessful
+            ) {
 
-                val body = response.body()
+                val body =
+                    response.body()
 
                 if (body != null) {
 
-                    Resource.Success(body)
+                    Resource.Success(
+                        body
+                    )
 
                 } else {
 
                     Resource.Error(
-                        "Server returned an empty response."
+                        "Empty response."
                     )
                 }
 
@@ -442,11 +745,19 @@ class AppointmentRepository @Inject constructor(
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (
+            e: Exception
+        ) {
+
+            Log.e(
+                TAG,
+                "Error requesting cancellation",
+                e
+            )
 
             Resource.Error(
-                e.message
-                    ?: "An error occurred while cancelling appointment."
+                e.localizedMessage
+                    ?: "Network error while requesting cancellation."
             )
         }
     }

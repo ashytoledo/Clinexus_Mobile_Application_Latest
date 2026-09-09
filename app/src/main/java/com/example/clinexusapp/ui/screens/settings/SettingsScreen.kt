@@ -27,18 +27,18 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, settingsViewModel: SettingsViewModel) {
     val darkMode by settingsViewModel.isDarkMode.collectAsState()
-    var notificationsEnabled by remember { mutableStateOf(true) }
+    var notificationsEnabled by remember { mutableStateOf(value = true) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = padding.calculateBottomPadding())
+                .padding(bottom = padding.calculateBottomPadding(),)
         ) {
             WavyTealHeader(
                 title = "Settings",
@@ -62,8 +62,9 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, settingsViewModel: 
                                 iconColor = Color(0xFF0288D1),
                                 iconBg = if (isSystemInDarkTheme()) Color(0xFF0288D1).copy(alpha = 0.1f) else Color(0xFFE1F5FE),
                                 isChecked = notificationsEnabled,
-                                onCheckedChange = { notificationsEnabled = it }
-                            )
+                            ) {
+                                notificationsEnabled = it
+                            }
                             SettingsToggleItem(
                                 title = "Dark Mode",
                                 icon = Icons.Default.DarkMode,

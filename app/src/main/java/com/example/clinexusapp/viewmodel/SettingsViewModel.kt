@@ -8,7 +8,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor() : ViewModel() {
-    private val _isDarkMode = MutableStateFlow(false)
+    private val _isDarkMode = MutableStateFlow(value = false)
     val isDarkMode = _isDarkMode.asStateFlow()
 
     fun toggleDarkMode(enabled: Boolean) {

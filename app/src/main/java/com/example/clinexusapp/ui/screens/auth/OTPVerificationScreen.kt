@@ -29,14 +29,20 @@ fun VerifyOTPScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val state = otpState
-    LaunchedEffect(state) {
+    LaunchedEffect(state, resetToken) {
         if (state is Resource.Success) {
-            if (purpose == "reset" && resetToken != null) {
-                onOtpVerified(resetToken)
+            if (purpose == "reset") {
+                if (resetToken != null) {
+                    onOtpVerified(resetToken)
+                    viewModel.resetState()
+                } else {
+                    // Handled error if token is missing
+                    snackbarHostState.showSnackbar("Verification successful, but reset token is missing.")
+                }
             } else if (purpose == "verification") {
                 onOtpVerified(null)
+                viewModel.resetState()
             }
-            viewModel.resetState()
         } else if (state is Resource.Error) {
             snackbarHostState.showSnackbar(state.message ?: "Verification failed")
         }

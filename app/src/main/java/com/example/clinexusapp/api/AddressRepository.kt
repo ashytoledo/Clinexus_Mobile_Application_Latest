@@ -11,7 +11,7 @@ class AddressRepository @Inject constructor(private val apiService: AddressApiSe
     suspend fun getRegions(): Resource<List<Region>> {
         return try {
             val response = apiService.getRegions()
-            if (response.isSuccessful && response.body() != null) {
+            if ((response.isSuccessful) && (response.body() != null)) {
                 Resource.Success(response.body()!!)
             } else {
                 Resource.Error("Failed to fetch regions")
@@ -24,7 +24,7 @@ class AddressRepository @Inject constructor(private val apiService: AddressApiSe
     suspend fun getProvinces(regionCode: String): Resource<List<Province>> {
         return try {
             val response = apiService.getProvinces(regionCode)
-            if (response.isSuccessful && response.body() != null) {
+            if ((response.isSuccessful) && (response.body() != null)) {
                 Resource.Success(response.body()!!)
             } else {
                 Resource.Error("Failed to fetch provinces")
@@ -37,7 +37,7 @@ class AddressRepository @Inject constructor(private val apiService: AddressApiSe
     suspend fun getCities(provinceCode: String): Resource<List<City>> {
         return try {
             val response = apiService.getCitiesInProvince(provinceCode)
-            if (response.isSuccessful && response.body() != null) {
+            if ((response.isSuccessful) && (response.body() != null)) {
                 Resource.Success(response.body()!!)
             } else {
                 Resource.Error("Failed to fetch cities")
@@ -50,7 +50,7 @@ class AddressRepository @Inject constructor(private val apiService: AddressApiSe
     suspend fun getBarangays(cityCode: String): Resource<List<Barangay>> {
         return try {
             val response = apiService.getBarangays(cityCode)
-            if (response.isSuccessful && response.body() != null) {
+            if ((response.isSuccessful) && (response.body() != null)) {
                 Resource.Success(response.body()!!)
             } else {
                 Resource.Error("Failed to fetch barangays")

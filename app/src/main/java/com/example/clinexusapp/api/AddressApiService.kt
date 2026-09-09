@@ -12,8 +12,10 @@ interface AddressApiService {
     @GET("regions/{code}/provinces")
     suspend fun getProvinces(@Path("code") regionCode: String): Response<List<Province>>
 
+    /*
     @GET("regions/{code}/cities-municipalities")
     suspend fun getCitiesInRegion(@Path("code") regionCode: String): Response<List<City>>
+    */
 
     @GET("provinces/{code}/cities-municipalities")
     suspend fun getCitiesInProvince(@Path("code") provinceCode: String): Response<List<City>>

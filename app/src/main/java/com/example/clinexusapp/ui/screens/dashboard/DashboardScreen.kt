@@ -22,9 +22,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,9 +54,11 @@ import com.example.clinexusapp.ui.components.VibrantButton
 import com.example.clinexusapp.ui.components.WavyTealHeader
 import com.example.clinexusapp.ui.navigation.Screen
 import com.example.clinexusapp.ui.theme.DeepTeal
+import com.example.clinexusapp.model.PromotionDTO
 import com.example.clinexusapp.util.Resource
 import com.example.clinexusapp.util.SessionManager
 import com.example.clinexusapp.viewmodel.DashboardViewModel
+import java.util.Locale
 
 data class DashboardArticle(val title: String, val category: String)
 
@@ -62,6 +66,7 @@ data class DashboardArticle(val title: String, val category: String)
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     rootNavController: NavController,
+    onNotificationClick: () -> Unit,
 ) {
     var showInsightDialog by remember { mutableStateOf<DashboardArticle?>(null) }
     
@@ -70,6 +75,7 @@ fun DashboardScreen(
 
     val newsState by viewModel.newsState.collectAsState()
     val insightsState by viewModel.insightsState.collectAsState()
+    val promotionsState by viewModel.promotionsState.collectAsState()
     val nextAppt by viewModel.nextAppointment.collectAsState()
 
     if (showInsightDialog != null) {
@@ -103,7 +109,7 @@ fun DashboardScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
-        val isLoading = (newsState is Resource.Loading) || (insightsState is Resource.Loading)
+        val isLoading = (newsState is Resource.Loading) || (insightsState is Resource.Loading) || (promotionsState is Resource.Loading)
         
         if (isLoading) {
             DashboardSkeleton()
@@ -117,6 +123,7 @@ fun DashboardScreen(
                     WavyTealHeader(
                         title = "Hello, $firstName!",
                         subtitle = "Welcome back!",
+                        onNotificationClick = onNotificationClick,
                     )
                 }
 
@@ -166,6 +173,28 @@ fun DashboardScreen(
                                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), 
                                                 fontSize = 13.sp,
                                             )
+
+                                            val status = nextAppt!!.appointmentStatus.lowercase()
+                                            val isConfirmed = status.contains("confirmed") || status.contains("scheduled")
+                                            
+                                            val badgeColor = when {
+                                                isConfirmed -> Color(0xFF4CAF50)
+                                                else -> MaterialTheme.colorScheme.primary
+                                            }
+
+                                            Surface(
+                                                color = badgeColor.copy(alpha = 0.1f),
+                                                shape = RoundedCornerShape(4.dp),
+                                                modifier = Modifier.padding(top = 4.dp),
+                                            ) {
+                                                Text(
+                                                    text = nextAppt!!.displayStatus.uppercase(), 
+                                                    fontSize = 9.sp, 
+                                                    fontWeight = FontWeight.Black,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    color = badgeColor,
+                                                )
+                                            }
                                         }
                                     }
                                     Box(
@@ -212,6 +241,26 @@ fun DashboardScreen(
                                         text = "Book Now",
                                         onClick = { rootNavController.navigate(Screen.AppointmentBooking.route) },
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    val promotions = (promotionsState as? Resource.Success)?.data ?: emptyList()
+                    if (promotions.isNotEmpty()) {
+                        Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 32.dp)) {
+                            Text(
+                                text = "Promotions",
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                promotions.forEach { promotion ->
+                                    PromotionCard(promotion)
                                 }
                             }
                         }
@@ -343,6 +392,56 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PromotionCard(promotion: PromotionDTO) {
+    NeumorphicCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.Top) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .background(Color(0xFFFFE8D5), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.LocalOffer, null, tint = Color(0xFFE77A35), modifier = Modifier.size(24.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = promotion.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                promotion.discountValue?.let { value ->
+                    Text(
+                        text = formatDiscount(promotion.discountType, value),
+                        color = Color(0xFFE77A35),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                promotion.description?.takeIf { it.isNotBlank() }?.let { description ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = description,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatDiscount(type: String?, value: Double): String {
+    return if (type.equals("percentage", ignoreCase = true) || type.equals("percent", ignoreCase = true)) {
+        "${value.toInt()}% OFF"
+    } else {
+        "PHP ${String.format(Locale.US, "%,.2f", value)} OFF"
     }
 }
 

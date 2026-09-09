@@ -7,5 +7,5 @@ data class ChangePasswordRequest(
     val changePasswordToken: String,
 
     @SerializedName("newPassword")
-    val newPassword: String
+    val password: String
 )

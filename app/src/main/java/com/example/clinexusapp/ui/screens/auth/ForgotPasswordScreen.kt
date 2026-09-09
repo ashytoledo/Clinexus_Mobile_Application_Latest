@@ -23,6 +23,9 @@ fun ForgotPasswordScreen(
     onNavigateBack: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
+    val isEmailValid = remember(email) {
+        android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+    }
 
     val otpState by viewModel.otpState.collectAsState()
 
@@ -35,18 +38,8 @@ fun ForgotPasswordScreen(
         when (val state = otpState) {
 
             is Resource.Success -> {
-
-                val response = state.data
-
-                // Temporary debugging
-                response?.debugOtp?.let { otp ->
-                    snackbarHostState.showSnackbar(
-                        "DEBUG OTP: $otp"
-                    )
-                }
-
+                // Remove blocking showSnackbar call
                 onNavigateToOtp(email.trim())
-
                 viewModel.resetState()
             }
 
@@ -135,7 +128,7 @@ fun ForgotPasswordScreen(
                     )
                 },
 
-                enabled = email.trim().isNotEmpty() &&
+                enabled = isEmailValid &&
                         otpState !is Resource.Loading
             )
 

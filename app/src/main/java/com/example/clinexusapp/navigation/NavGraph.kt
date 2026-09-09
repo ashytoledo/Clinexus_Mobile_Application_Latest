@@ -3,7 +3,7 @@ package com.example.clinexusapp.navigation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -16,7 +16,7 @@ import com.example.clinexusapp.ui.screens.auth.*
 import com.example.clinexusapp.ui.screens.chat.ChatScreen
 import com.example.clinexusapp.ui.screens.main.MainScreen
 import com.example.clinexusapp.ui.screens.notifications.NotificationScreen
-import com.example.clinexusapp.ui.screens.profile.ChangePasswordScreen
+import com.example.clinexusapp.ui.screens.auth.ChangePasswordScreen
 import com.example.clinexusapp.ui.screens.profile.PersonalInformationScreen
 import com.example.clinexusapp.ui.screens.settings.SettingsScreen
 import com.example.clinexusapp.util.SessionManager
@@ -30,7 +30,9 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         enterTransition = { fadeIn(tween(400)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400)) },
         exitTransition = { fadeOut(tween(400)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400)) },
         popEnterTransition = { fadeIn(tween(400)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(400)) },
-        popExitTransition = { fadeOut(tween(400)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(400)) }
+        popExitTransition = {
+            fadeOut(tween(400)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(400))
+        },
     ) {
         // Splash, Onboarding, Login, Register
         composable(route = Screen.Splash.route) {
@@ -40,21 +42,18 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 },
-                onNavigateToHome = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
+            ) {
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Splash.route) { inclusive = true }
                 }
-            )
+            }
         }
         composable(route = Screen.Onboarding.route) {
-            OnboardingScreen(
-                onFinish = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Onboarding.route) { inclusive = true }
-                    }
+            OnboardingScreen {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.Onboarding.route) { inclusive = true }
                 }
-            )
+            }
         }
         composable(route = Screen.Login.route) {
             val loginViewModel: LoginViewModel = hiltViewModel()
@@ -68,10 +67,9 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
-                onNavigateToForgotPassword = {
-                    navController.navigate(Screen.ForgotPassword.route)
-                }
-            )
+            ) {
+                navController.navigate(Screen.ForgotPassword.route)
+            }
         }
         composable(route = Screen.Register.route) {
             val registerViewModel: RegisterViewModel = hiltViewModel()
@@ -171,10 +169,12 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
 
         composable(
             route = Screen.AppointmentBooking.route,
-            arguments = listOf(navArgument("doctorName") {
-                type = NavType.StringType
-                defaultValue = "Dr. Olivia Bennett"
-            })
+            arguments = listOf(
+                navArgument("doctorName") {
+                    type = NavType.StringType
+                    defaultValue = "Dr. Olivia Bennett"
+                },
+            ),
         ) { backStackEntry ->
             val doctorName = backStackEntry.arguments?.getString("doctorName") ?: "Dr. Olivia Bennett"
             val bookingViewModel: BookingViewModel = hiltViewModel()
@@ -210,8 +210,10 @@ fun SetupNavGraph(navController: NavHostController, settingsViewModel: SettingsV
         }
 
         composable(route = Screen.Notifications.route) {
+            val notificationViewModel: NotificationViewModel = hiltViewModel()
             NotificationScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                viewModel = notificationViewModel
             )
         }
 

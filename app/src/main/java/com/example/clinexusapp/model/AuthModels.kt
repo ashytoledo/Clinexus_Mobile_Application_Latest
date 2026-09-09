@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class VerifyOtpRequest(
     val email: String,
-    val otp: String
+    val otp: String,
 )
 
 data class ForgotPasswordRequest(
@@ -12,13 +12,13 @@ data class ForgotPasswordRequest(
 )
 
 data class ResetPasswordRequest(
-    val resetToken: String,
-    val newPassword: String
+    @SerializedName("resetToken") val resetToken: String,
+    @SerializedName("password") val password: String
 )
 
 
 data class VerifyPasswordChangeOtpRequest(
-    val otp: String
+    val otp: String,
 )
 
 

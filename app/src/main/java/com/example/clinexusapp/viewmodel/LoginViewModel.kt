@@ -22,16 +22,25 @@ class LoginViewModel @Inject constructor(private val repository: AuthRepository)
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _loginState.value = Resource.Loading
+            SessionManager.logout()
             val request = LoginRequest(email, password)
             val result = repository.login(request)
             
-            if (result is Resource.Success && (result.data?.token != null) && (result.data.patient != null)) {
-                SessionManager.saveSession(result.data.token, result.data.patient)
+            if (result is Resource.Success) {
+                val token = result.data.token
+                val patient = result.data.patient
+
+                if (token.isNullOrBlank() || patient == null) {
+                    _loginState.value = Resource.Error("Login response did not include a valid patient session")
+                    return@launch
+                }
+
+                SessionManager.saveSession(token, patient)
                 
                 // Fetch full profile immediately to get first/last name
                 val profileResult = repository.getPatientProfile()
-                if (profileResult is Resource.Success && profileResult.data != null) {
-                    SessionManager.updateProfile(profileResult.data)
+                (profileResult as? Resource.Success)?.let {
+                    SessionManager.updateProfile(it.data)
                 }
             }
             

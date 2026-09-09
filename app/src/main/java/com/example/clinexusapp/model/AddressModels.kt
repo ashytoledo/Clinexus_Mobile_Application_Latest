@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class Region(
     val code: String,
     val name: String,
-    val regionName: String
+    val regionName: String,
 )
 
 data class Province(

@@ -3,10 +3,9 @@ package com.example.clinexusapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.clinexusapp.api.AppointmentRepository
-import com.example.clinexusapp.api.AuthRepository
 import com.example.clinexusapp.model.AppointmentDTO
 import com.example.clinexusapp.model.CancelAppointmentRequest
-import com.example.clinexusapp.model.RescheduleRequest
+import com.example.clinexusapp.model.RescheduleAppointmentRequest
 import com.example.clinexusapp.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +15,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    private val repository: AuthRepository,
     private val appointmentRepository: AppointmentRepository
 ) : ViewModel() {
 
@@ -32,7 +30,7 @@ class HistoryViewModel @Inject constructor(
             _historyState.value = Resource.Loading
             val result = appointmentRepository.getPatientAppointments()
             
-            if (result is Resource.Success && result.data != null) {
+            if (result is Resource.Success) {
                 val sorted = result.data.sortedByDescending { 
                     try {
                         val cleanDate = it.appointmentDate.substringBefore("T")
@@ -53,7 +51,7 @@ class HistoryViewModel @Inject constructor(
         viewModelScope.launch {
             appointmentRepository.rescheduleAppointment(
                 id,
-                RescheduleRequest(newDate, newStartTime, newEndTime, note)
+                RescheduleAppointmentRequest(newDate, newStartTime, newEndTime, note)
             )
             fetchHistory()
         }

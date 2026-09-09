@@ -7,14 +7,13 @@ import retrofit2.http.*
 interface AppointmentApiService {
 
     // Active dentists
-    @GET("api/appointments/{token}/active-dentists")
+    @GET("api/active-dentists")
     suspend fun getActiveDentists(
-        @Path("token") tokenPath: String,
-        @Header("Authorization") tokenHeader: String,
-    ): Response<List<DentistDTO>>
+        @Header("Authorization") tokenHeader: String
+    ): Response<AvailableDentistsResponse>
 
     // Dentist schedule
-    @GET("api/appointments/dentists/{dentistID}/schedule")
+    @GET("api/dentists/{dentistID}/available-slots")
     suspend fun getDentistSchedule(
         @Header("Authorization") token: String,
         @Path("dentistID") dentistId: Int
@@ -26,17 +25,22 @@ interface AppointmentApiService {
         @Header("Authorization") token: String,
     ):  Response<PatientAppointmentsResponse>
 
-    @GET("api/appointments/requires-appointment-services")
+    @GET("api/bookable-services")
     suspend fun getBookableServices(
         @Header("Authorization") token: String,
     ): Response<List<BookableServiceDTO>>
 
+    @GET("api/active-promotions-mobile")
+    suspend fun getActivePromotions(
+        @Header("Authorization") token: String
+    ): Response<ActivePromotionsResponse>
+
 
     // Dentist available slots
-    @GET("api/appointments/available-timeslots")
+    @GET("api/dentists/{dentistID}/available-slots")
     suspend fun getAvailableTimeslots(
         @Header("Authorization") token: String,
-        @Query("dentistID") dentistId: Int,
+        @Path("dentistID") dentistId: Int,
         @Query("appointmentDate") appointmentDate: String,
     ): Response<AvailableTimeslotsResponse>
 
@@ -52,7 +56,7 @@ interface AppointmentApiService {
     suspend fun requestReschedule(
         @Header("Authorization") token: String,
         @Path("appointmentID") appointmentId: Int,
-        @Body request: RescheduleRequest
+        @Body request: RescheduleAppointmentRequest
     ): Response<GenericResponse>
 
     // Request cancellation

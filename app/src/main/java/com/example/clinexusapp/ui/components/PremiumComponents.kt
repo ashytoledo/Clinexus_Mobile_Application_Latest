@@ -1,6 +1,6 @@
 package com.example.clinexusapp.ui.components
 
-import androidx.compose.animation.*
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,7 +46,7 @@ fun Modifier.premiumClickable(onClick: () -> Unit): Modifier {
 @Composable
 fun NeumorphicCard(
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val isDark = isSystemInDarkTheme()
     Surface(
@@ -75,7 +75,7 @@ fun VibrantButton(
     enabled: Boolean = true
 ) {
     val haptic = LocalHapticFeedback.current
-    var isPressed by remember { mutableStateOf(false) }
+    var isPressed by remember { mutableStateOf(value = false) }
     
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
@@ -104,7 +104,7 @@ fun VibrantButton(
                         onTap = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onClick()
-                        }
+                        },
                     )
                 }
             },
@@ -220,20 +220,12 @@ fun WavyTealHeader(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onNotificationClick != null) {
-                    IconButton(onClick = onNotificationClick) {
+                onNotificationClick?.let {
+                    IconButton(onClick = it) {
                         Icon(Icons.Default.Notifications, null, tint = White, modifier = Modifier.size(22.dp))
                     }
                 }
-                if (onSettingsClick != null) {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, null, tint = White, modifier = Modifier.size(22.dp))
-                    }
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(Icons.Default.SignalCellularAlt, null, tint = White, modifier = Modifier.size(18.dp).alpha(0.7f))
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(Icons.Default.BatteryFull, null, tint = White, modifier = Modifier.size(20.dp).rotate(90f).alpha(0.7f))
+
             }
         }
 
@@ -268,10 +260,22 @@ fun WavyTealHeader(
 fun ElegantCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) = NeumorphicCard(modifier, content)
 
 @Composable
-fun ElegantButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, containerColor: Color = DeepTeal, contentColor: Color = White) = VibrantButton(text, onClick, modifier, enabled)
+fun ElegantButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @Suppress("UNUSED_PARAMETER") containerColor: Color = DeepTeal,
+    @Suppress("UNUSED_PARAMETER") contentColor: Color = White,
+) = VibrantButton(text, onClick, modifier, enabled)
 
 @Composable
-fun ElegantHeader(title: String, subtitle: String? = null, onProfileClick: () -> Unit = {}, onNotificationClick: () -> Unit = {}) = WavyTealHeader(title, subtitle, onNotificationClick = onNotificationClick)
+fun ElegantHeader(
+    title: String,
+    subtitle: String? = null,
+    @Suppress("UNUSED_PARAMETER") onProfileClick: () -> Unit = {},
+    onNotificationClick: () -> Unit = {},
+) = WavyTealHeader(title, subtitle, onNotificationClick = onNotificationClick)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -293,7 +297,7 @@ fun ElegantTopAppBar(title: String, onBack: (() -> Unit)? = null, actions: @Comp
             }
         },
         actions = actions,
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
     )
 }
 
@@ -301,10 +305,21 @@ fun ElegantTopAppBar(title: String, onBack: (() -> Unit)? = null, actions: @Comp
 fun PremiumGlassCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) = NeumorphicCard(modifier, content)
 
 @Composable
-fun PremiumButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, containerColor: Color = DeepTeal) = VibrantButton(text, onClick, modifier, enabled)
+fun PremiumButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @Suppress("UNUSED_PARAMETER") containerColor: Color = DeepTeal,
+) = VibrantButton(text, onClick, modifier, enabled)
 
 @Composable
-fun PremiumHeader(title: String, subtitle: String? = null, onProfileClick: () -> Unit = {}, onNotificationClick: () -> Unit = {}) = WavyTealHeader(title, subtitle, onNotificationClick = onNotificationClick)
+fun PremiumHeader(
+    title: String,
+    subtitle: String? = null,
+    @Suppress("UNUSED_PARAMETER") onProfileClick: () -> Unit = {},
+    onNotificationClick: () -> Unit = {},
+) = WavyTealHeader(title, subtitle, onNotificationClick = onNotificationClick)
 
 @Composable
 fun PremiumTopAppBar(title: String, onBack: (() -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) = ElegantTopAppBar(title, onBack, actions)

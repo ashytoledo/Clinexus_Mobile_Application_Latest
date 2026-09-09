@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.window.Dialog
 import com.example.clinexusapp.ui.components.*
 import com.example.clinexusapp.ui.theme.*
 import com.example.clinexusapp.util.SessionManager
@@ -28,6 +29,7 @@ import com.example.clinexusapp.viewmodel.ProfileViewModel
 import com.example.clinexusapp.util.Resource
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
@@ -35,11 +37,16 @@ fun ProfileScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPersonalInformation: () -> Unit,
     onNavigateToHistory: () -> Unit,
-    onNavigateToChangePassword: () -> Unit,   // ✅ NEW callback
+    onNavigateToChangePassword: () -> Unit,
     viewModel: ProfileViewModel,
 ) {
     val user by SessionManager.currentUser.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+
+    // Options Dialog State
+    var showOptions by remember { mutableStateOf(false) }
+    var showFullImage by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
 
     // Auto-fetch if names are missing
     LaunchedEffect(user) {
@@ -96,11 +103,13 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-                    .offset(y = (-15).dp), // Subtly touching the wave
+                    .offset(y = (-15).dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Surface(
-                    modifier = Modifier.size(110.dp),
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clickable { showOptions = true },
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 8.dp,
@@ -121,6 +130,82 @@ fun ProfileScreen(
                                 modifier = Modifier.size(70.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
+                        }
+                    }
+                }
+
+                if (showOptions) {
+                    ModalBottomSheet(
+                        onDismissRequest = { showOptions = false },
+                        sheetState = sheetState,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp)
+                                .padding(bottom = 32.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = "Profile Options",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            
+                            ProfileOptionItem(
+                                title = "View Profile Picture",
+                                icon = Icons.Default.Visibility,
+                                onClick = {
+                                    showOptions = false
+                                    showFullImage = true
+                                }
+                            )
+                            
+                            ProfileOptionItem(
+                                title = "Edit Profile",
+                                icon = Icons.Default.Edit,
+                                onClick = {
+                                    showOptions = false
+                                    onNavigateToPersonalInformation()
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (showFullImage) {
+                    Dialog(onDismissRequest = { showFullImage = false }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable { showFullImage = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.9f)
+                                    .aspectRatio(1f),
+                                shape = RoundedCornerShape(24.dp),
+                                color = MaterialTheme.colorScheme.surface
+                            ) {
+                                if (!user?.profilePicture.isNullOrEmpty()) {
+                                    AsyncImage(
+                                        model = user?.profilePicture,
+                                        contentDescription = "Full Profile Picture",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        null,
+                                        modifier = Modifier.fillMaxSize().padding(48.dp),
+                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -188,7 +273,7 @@ fun ProfileScreen(
                         iconColor = Color(0xFF64748B),
                         iconBg = Color(0xFFF1F5F9)
                     ) {
-                        onNavigateToChangePassword()   // ✅ Navigate to Change Password Screen
+                        onNavigateToChangePassword()
                     }
                 }
 
@@ -210,6 +295,30 @@ fun ProfileScreen(
                     Text(text = "Log Out", color = ErrorRed, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ProfileOptionItem(title: String, icon: ImageVector, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.example.clinexusapp.ui.screens.profile
+package com.example.clinexusapp.ui.screens.auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -20,9 +20,9 @@ import kotlinx.coroutines.launch
 fun ChangePasswordScreen(
     viewModel: OTPViewModel,
     onBack: () -> Unit,
-    onChangeSuccess: () -> Unit
+    onChangeSuccess: () -> Unit,
 ) {
-    var step by remember { mutableStateOf(0) } // 0=Request OTP, 1=Verify, 2=New Password
+    var step by remember { mutableIntStateOf(0) } // 0=Request OTP, 1=Verify, 2=New Password
     var otp by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -34,29 +34,38 @@ fun ChangePasswordScreen(
 
     val state = otpState
     LaunchedEffect(state) {
-        if (state is Resource.Success) {
-            when (step) {
-                0 -> step = 1
-                1 -> step = 2
-                2 -> {
-                    onChangeSuccess()
-                    viewModel.resetState()
+        when (val currentState = state) {
+            is Resource.Success<*> -> {
+                when (step) {
+                    0 -> {
+                        step = 1
+                        viewModel.resetOtpState()  // ✅ now exists
+                    }
+                    1 -> {
+                        step = 2
+                        viewModel.resetOtpState()  // ✅ now exists
+                    }
+                    2 -> {
+                        onChangeSuccess()
+                        viewModel.resetState()
+                    }
                 }
             }
-        } else if (state is Resource.Error) {
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar(state.message ?: "Operation failed")
+            is Resource.Error -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(currentState.message ?: "Operation failed")
+                }
             }
+            else -> {} // ignore Loading or other states
         }
     }
 
     Scaffold(
         topBar = {
-            // ✅ Use ElegantTopAppBar if it exists; otherwise, use standard TopAppBar
             ElegantTopAppBar(title = "Change Password", onBack = onBack)
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -115,7 +124,7 @@ fun ChangePasswordScreen(
                     VibrantButton(
                         text = if (otpState is Resource.Loading) "Verifying..." else "Verify",
                         onClick = { viewModel.verifyPasswordChangeOTP(otp) },
-                        enabled = otp.length == 6 && otpState !is Resource.Loading
+                        enabled = (otp.length == 6) && (otpState !is Resource.Loading)
                     )
                 }
                 2 -> {
@@ -162,9 +171,9 @@ fun ChangePasswordScreen(
                                 }
                             }
                         },
-                        enabled = newPassword.isNotEmpty() &&
-                                newPassword == confirmPassword &&
-                                otpState !is Resource.Loading
+                        enabled = (newPassword.isNotEmpty()) &&
+                                (newPassword == confirmPassword) &&
+                                (otpState !is Resource.Loading)
                     )
                 }
             }

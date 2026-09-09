@@ -22,6 +22,21 @@ data class AppointmentDTO(
 
     // ✅ Use the correct field name
     val treatment: String get() = appointmentType.replaceFirstChar { it.uppercase() }
+
+    // ✅ Format status for display
+    val displayStatus: String get() = when (appointmentStatus.lowercase().trim()) {
+        "needs_cancellation" -> "Pending Cancellation"
+        "needs_reschedule" -> "Pending Reschedule"
+        "no_show" -> "No Show"
+        "pending" -> "Pending"
+        "requested" -> "Requested"
+        "scheduled" -> "Scheduled"
+        "confirmed" -> "Confirmed"
+        "cancelled", "canceled" -> "Cancelled"
+        "completed", "done" -> "Completed"
+        "rejected", "declined", "denied" -> "Rejected"
+        else -> appointmentStatus.replace("_", " ").split(" ").joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+    }
 }
 data class ChatMessageDTO(
     val id: String,

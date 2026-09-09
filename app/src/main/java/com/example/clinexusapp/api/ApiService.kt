@@ -24,7 +24,7 @@ interface ApiService {
         @Part("barangay") barangay: RequestBody,
         @Part("city") city: RequestBody,
         @Part("province") province: RequestBody,
-        @Part file: MultipartBody.Part? = null
+        @Part file: MultipartBody.Part? = null,
     ): Response<RegisterResponse>
 
     @POST("api/patient-login")
@@ -34,20 +34,20 @@ interface ApiService {
 
     @POST("api/verify-email")
     suspend fun verifyEmail(
-        @Body request: VerifyOtpRequest
+        @Body request: VerifyOtpRequest,
     ): Response<GenericResponse>
 
-    @POST("api/forgot-password")
+    @POST("api/patient/forgot-password")
     suspend fun forgotPassword(
-        @Body request: ForgotPasswordRequest
+        @Body request: ForgotPasswordRequest,
     ): Response<GenericResponse>
 
-    @POST("api/verify-otp")
+    @POST("api/patient/verify-otp")
     suspend fun verifyOTP(
         @Body request: VerifyOtpRequest
     ): Response<GenericResponse>
 
-    @POST("api/reset-password")
+    @POST("api/patient/reset-password")
     suspend fun resetPassword(
         @Body request: ResetPasswordRequest
     ): Response<GenericResponse>
@@ -87,7 +87,7 @@ interface ApiService {
         @Body request: VerifyPasswordChangeOtpRequest
     ): Response<GenericResponse>
 
-    @POST("api/change-password")
+    @POST("api/patient/change-password")
     suspend fun changePatientPassword(
         @Header("Authorization") token: String,
         @Body request: ChangePasswordRequest
@@ -143,4 +143,20 @@ interface ApiService {
     suspend fun getHealthInsights(
         @Header("Authorization") token: String
     ): Response<List<HealthInsightDTO>>
+
+    @GET("api/notifications")
+    suspend fun getNotifications(
+        @Header("Authorization") token: String
+    ): Response<List<NotificationDTO>>
+
+    @PATCH("api/notifications/{id}/read")
+    suspend fun markNotificationAsRead(
+        @Header("Authorization") token: String,
+        @Path("id") notificationId: Int
+    ): Response<GenericResponse>
+
+    @PATCH("api/notifications/read-all")
+    suspend fun markAllNotificationsAsRead(
+        @Header("Authorization") token: String
+    ): Response<GenericResponse>
 }

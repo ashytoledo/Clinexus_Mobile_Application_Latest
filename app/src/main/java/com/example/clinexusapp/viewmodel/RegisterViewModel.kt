@@ -16,7 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val repository: AuthRepository,
-    private val addressRepository: AddressRepository
+    private val addressRepository: AddressRepository,
 ) : ViewModel() {
 
     private val _registerState = MutableStateFlow<Resource<RegisterResponse>?>(null)
@@ -46,7 +46,7 @@ class RegisterViewModel @Inject constructor(
         viewModelScope.launch {
             val result = addressRepository.getRegions()
             if (result is Resource.Success) {
-                _regions.value = result.data ?: emptyList()
+                _regions.value = result.data
             }
         }
     }
@@ -58,7 +58,7 @@ class RegisterViewModel @Inject constructor(
         viewModelScope.launch {
             val result = addressRepository.getProvinces(regionCode)
             if (result is Resource.Success) {
-                _provinces.value = result.data ?: emptyList()
+                _provinces.value = result.data
             }
         }
     }
@@ -69,7 +69,7 @@ class RegisterViewModel @Inject constructor(
         viewModelScope.launch {
             val result = addressRepository.getCities(provinceCode)
             if (result is Resource.Success) {
-                _cities.value = result.data ?: emptyList()
+                _cities.value = result.data
             }
         }
     }
@@ -79,7 +79,7 @@ class RegisterViewModel @Inject constructor(
         viewModelScope.launch {
             val result = addressRepository.getBarangays(cityCode)
             if (result is Resource.Success) {
-                _barangays.value = result.data ?: emptyList()
+                _barangays.value = result.data
             }
         }
     }

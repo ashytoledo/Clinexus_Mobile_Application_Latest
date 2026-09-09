@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,11 +34,11 @@ import kotlinx.coroutines.launch
 fun AppointmentHistoryScreen(
     onBack: () -> Unit,
     onNavigateToBooking: () -> Unit,
-    viewModel: HistoryViewModel
+    viewModel: HistoryViewModel,
 ) {
     val historyState by viewModel.historyState.collectAsState()
     var selectedAppointment by remember { mutableStateOf<HistoryAppointment?>(null) }
-    var showActionDialog by remember { mutableStateOf(false) }
+    var showActionDialog by remember { mutableStateOf(value = false) }
     var showCancelDialog by remember { mutableStateOf(false) }
     var showRescheduleDialog by remember { mutableStateOf(false) }
     
@@ -50,7 +49,7 @@ fun AppointmentHistoryScreen(
     val scope = rememberCoroutineScope()
 
     // 1. Initial Choice Dialog
-    if (showActionDialog && selectedAppointment != null) {
+    if (showActionDialog && (selectedAppointment != null)) {
         val appt = selectedAppointment!!
         AlertDialog(
             onDismissRequest = { showActionDialog = false },
@@ -68,10 +67,12 @@ fun AppointmentHistoryScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showActionDialog = false
-                    showCancelDialog = true
-                }) {
+                TextButton(
+                    onClick = {
+                        showActionDialog = false
+                        showCancelDialog = true
+                    },
+                ) {
                     Text("CANCEL VISIT", color = DarkRed)
                 }
             },
@@ -174,8 +175,7 @@ fun AppointmentHistoryScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            val state = historyState
-            when (state) {
+            when (val state = historyState) {
                 is Resource.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -187,7 +187,7 @@ fun AppointmentHistoryScreen(
                     }
                 }
                 is Resource.Success -> {
-                    val appointmentsList = state.data ?: emptyList()
+                    val appointmentsList = state.data
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -206,14 +206,17 @@ fun AppointmentHistoryScreen(
                         }
                         
                         items(appointmentsList) { appointment ->
-                            val isPending = appointment.appointmentStatus.contains("Pending", ignoreCase = true)
+                            val status = appointment.appointmentStatus.lowercase()
+                            val isCancelled = status.contains("cancelled") || status.contains("canceled") || status.contains("no_show")
+                            val isConfirmed = status.contains("confirmed") || status.contains("scheduled")
+                            
                             NeumorphicCard(modifier = Modifier.fillMaxWidth().clickable {
                                 selectedAppointment = HistoryAppointment(
                                     appointment.appointmentId,
                                     appointment.doctor,
                                     "${com.example.clinexusapp.util.DateUtils.formatDisplayDate(appointment.appointmentDate)} • ${com.example.clinexusapp.util.DateUtils.formatDisplayTime(appointment.startTime)}",
                                     Icons.Default.MedicalServices,
-                                    VibrantTeal
+                                    if (isCancelled) Color.Red else if (isConfirmed) Color(0xFF4CAF50) else VibrantTeal
                                 )
                                 showActionDialog = true
                             }) {
@@ -221,10 +224,18 @@ fun AppointmentHistoryScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(48.dp)
-                                            .background(VibrantTeal.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                                            .background(
+                                                (if (isCancelled) Color.Red else if (isConfirmed) Color(0xFF4CAF50) else VibrantTeal).copy(alpha = 0.1f), 
+                                                RoundedCornerShape(12.dp)
+                                            ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(Icons.Default.MedicalServices, null, tint = VibrantTeal, modifier = Modifier.size(24.dp))
+                                        Icon(
+                                            if (isCancelled) Icons.Default.Cancel else if (isConfirmed) Icons.Default.CheckCircle else Icons.Default.MedicalServices, 
+                                            null, 
+                                            tint = if (isCancelled) Color.Red else if (isConfirmed) Color(0xFF4CAF50) else VibrantTeal, 
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column(modifier = Modifier.weight(1f)) {
@@ -239,20 +250,21 @@ fun AppointmentHistoryScreen(
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), 
                                             fontSize = 13.sp
                                         )
-                                        if (isPending) {
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                                shape = RoundedCornerShape(4.dp),
-                                                modifier = Modifier.padding(top = 4.dp)
-                                            ) {
-                                                Text(
-                                                    text = appointment.appointmentStatus.uppercase(), 
-                                                    fontSize = 9.sp, 
-                                                    fontWeight = FontWeight.Black,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
+                                        
+                                        val badgeColor = if (isCancelled) Color.Red else if (isConfirmed) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
+                                        
+                                        Surface(
+                                            color = badgeColor.copy(alpha = 0.1f),
+                                            shape = RoundedCornerShape(4.dp),
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = appointment.displayStatus.uppercase(), 
+                                                fontSize = 9.sp, 
+                                                fontWeight = FontWeight.Black,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                color = badgeColor
+                                            )
                                         }
                                     }
                                     Icon(

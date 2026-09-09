@@ -35,7 +35,7 @@ class ChatRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.getAvailableContacts(authHeader)
             if (response.isSuccessful) {
-                Resource.Success(response.body()?.data ?: emptyList())
+                Resource.Success(response.body() ?: emptyList())
             } else {
                 Resource.Error(response.errorBody()?.string() ?: "Error fetching contacts")
             }
@@ -48,7 +48,7 @@ class ChatRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.getConversations(authHeader)
             if (response.isSuccessful) {
-                Resource.Success(response.body()?.data ?: emptyList())
+                Resource.Success(response.body() ?: emptyList())
             } else {
                 Resource.Error(response.errorBody()?.string() ?: "Error fetching conversations")
             }

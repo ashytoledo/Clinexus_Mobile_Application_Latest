@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.clinexusapp.model.*
 import com.example.clinexusapp.ui.components.*
 import com.example.clinexusapp.ui.theme.*
@@ -40,7 +42,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -51,7 +52,6 @@ fun SelectionCard(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val scale by animateFloatAsState(if (isSelected) 0.98f else 1f, label = "scale")
-    
     Surface(
         onClick = onClick,
         modifier = modifier
@@ -87,34 +87,35 @@ fun BookingSectionHeader(title: String, icon: ImageVector) {
         Icon(icon, null, tint = DeepTeal, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = title, 
-            fontWeight = FontWeight.Black, 
-            fontSize = 19.sp, 
+            text = title,
+            fontWeight = FontWeight.Black,
+            fontSize = 19.sp,
             color = RoyalNavy,
-            letterSpacing = (-0.5).sp
+            letterSpacing = (-0.5).sp,
         )
     }
 }
 
 @Composable
 fun BookingDateSelector(
-    selected: String, 
+    selected: String,
     enabledDays: List<String>? = null,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
 ) {
-    val dates = remember(enabledDays) {
+    val configuration = LocalConfiguration.current
+    val locale = configuration.locales[0]
+
+    val dates = remember(enabledDays, locale) {
         val calendar = Calendar.getInstance()
-        val sdfDisplay = SimpleDateFormat("EEE dd", Locale.getDefault())
-        val sdfValue = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val sdfDayName = SimpleDateFormat("EEEE", Locale.US) // Full day name (e.g. "Monday")
-        
-        List(14) { // Show 14 days instead of 7 to give more options if some are disabled
+        val sdfDisplay = SimpleDateFormat("EEE dd", locale)
+        val sdfValue = SimpleDateFormat("yyyy-MM-dd", locale)
+        val sdfDayName = SimpleDateFormat("EEEE", Locale.US)
+        List(14) {
             val date = calendar.time
             val display = sdfDisplay.format(date).uppercase()
             val value = sdfValue.format(date)
             val dayName = sdfDayName.format(date)
-            val isEnabled = enabledDays == null || enabledDays.any { it.equals(dayName, ignoreCase = true) }
-            
+            val isEnabled = (enabledDays == null) || enabledDays.any { it.equals(dayName, ignoreCase = true) }
             calendar.add(Calendar.DAY_OF_YEAR, 1)
             DateOption(display, value, isEnabled)
         }
@@ -122,15 +123,14 @@ fun BookingDateSelector(
 
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(horizontal = 24.dp)
+        contentPadding = PaddingValues(horizontal = 24.dp),
     ) {
         items(dates) { option ->
             val isSelected = selected == option.value
-            
             Surface(
-                onClick = { onSelect(option.value) },
+                onClick = { if (option.isEnabled) onSelect(option.value) },
                 modifier = Modifier
-                    .width(85.dp)
+                    .width(96.dp)
                     .height(110.dp)
                     .shadow(
                         elevation = if (isSelected) 12.dp else 2.dp,
@@ -140,9 +140,11 @@ fun BookingDateSelector(
                         } else Color.Black.copy(alpha = 0.05f),
                     ),
                 shape = RoundedCornerShape(22.dp),
-                color = if (isSelected) {
-                    if (option.isEnabled) VibrantTeal else DarkRed
-                } else White,
+                color = when {
+                    isSelected && option.isEnabled -> VibrantTeal
+                    isSelected && !option.isEnabled -> DarkRed
+                    else -> White
+                },
                 border = if (!option.isEnabled && !isSelected) androidx.compose.foundation.BorderStroke(1.dp, DarkRed.copy(alpha = 0.3f)) else null
             ) {
                 Column(
@@ -152,15 +154,23 @@ fun BookingDateSelector(
                 ) {
                     Text(
                         text = option.display.split(" ").first(),
-                        color = if (isSelected) White.copy(alpha = 0.8f) else if (option.isEnabled) SlateGray else DarkRed.copy(alpha = 0.6f),
+                        color = when {
+                            isSelected -> White.copy(alpha = 0.8f)
+                            option.isEnabled -> SlateGray
+                            else -> DarkRed.copy(alpha = 0.6f)
+                        },
                         fontSize = 14.sp,
                         fontWeight = if (option.isEnabled) FontWeight.Bold else FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = option.display.split(" ").last(),
-                        color = if (isSelected) White else if (option.isEnabled) RoyalNavy else DarkRed,
-                        fontSize = 32.sp,
+                        color = when {
+                            isSelected -> White
+                            option.isEnabled -> RoyalNavy
+                            else -> DarkRed
+                        },
+                        fontSize = 27.sp,
                         fontWeight = FontWeight.Black
                     )
                 }
@@ -183,14 +193,14 @@ fun AppointmentBookingScreen(
     val selectedDate by viewModel.selectedDate.collectAsState()
     var selectedSlot by remember { mutableStateOf<AvailableSlotDTO?>(null) }
     var isBookingConfirmed by remember { mutableStateOf(value = false) }
-    
+
     val dentistsState by viewModel.dentistsState.collectAsState()
     val servicesState by viewModel.servicesState.collectAsState()
-    
     val selectedDentist by viewModel.selectedDentist.collectAsState()
     val selectedServices by viewModel.selectedServices.collectAsState()
     val availableTimeslots by viewModel.availableTimeslots.collectAsState()
     val bookingState by viewModel.bookingState.collectAsState()
+    val dentistScheduleState by viewModel.dentistSchedule.collectAsState()
 
     LaunchedEffect(bookingState) {
         when (val state = bookingState) {
@@ -224,16 +234,17 @@ fun AppointmentBookingScreen(
                 verticalArrangement = Arrangement.spacedBy(28.dp),
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Dentist Grid
+
+                // Dentist Section
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     BookingSectionHeader("Select Dentist", Icons.Default.Person)
-                    val dState = dentistsState
-                    when (dState) {
-                        is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = VibrantTeal) }
+                    when (val dState = dentistsState) {
+                        is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = VibrantTeal)
+                        }
                         is Resource.Error -> Text(dState.message ?: "Error", color = Color.Red, modifier = Modifier.padding(horizontal = 24.dp))
                         is Resource.Success -> {
-                            val dentists = dState.data ?: emptyList()
+                            val dentists = dState.data
                             Column(
                                 modifier = Modifier.padding(horizontal = 24.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -244,7 +255,7 @@ fun AppointmentBookingScreen(
                                             DentistSelectionItem(
                                                 dentist = dentist,
                                                 isSelected = selectedDentist?.dentistId == dentist.dentistId,
-                                                onClick = { 
+                                                onClick = {
                                                     viewModel.selectDentist(dentist)
                                                     selectedSlot = null
                                                 },
@@ -259,16 +270,17 @@ fun AppointmentBookingScreen(
                         else -> {}
                     }
                 }
-                
-                // Services Grid
+
+                // Services Section
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     BookingSectionHeader("Select Service", Icons.Default.MedicalServices)
-                    val sState = servicesState
-                    when (sState) {
-                        is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = VibrantTeal) }
+                    when (val sState = servicesState) {
+                        is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = VibrantTeal)
+                        }
                         is Resource.Error -> Text(sState.message ?: "Error", color = Color.Red, modifier = Modifier.padding(horizontal = 24.dp))
                         is Resource.Success -> {
-                            val services = sState.data ?: emptyList()
+                            val services = sState.data
                             Column(
                                 modifier = Modifier.padding(horizontal = 24.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -279,7 +291,7 @@ fun AppointmentBookingScreen(
                                             BookingServiceItem(
                                                 service = service,
                                                 isSelected = selectedServices.any { it.serviceId == service.serviceId },
-                                                onClick = { 
+                                                onClick = {
                                                     viewModel.toggleService(service)
                                                     selectedSlot = null
                                                 },
@@ -297,36 +309,38 @@ fun AppointmentBookingScreen(
 
                 // Date Section
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val scheduleState by viewModel.dentistSchedule.collectAsState()
-                    val scState = scheduleState
-                    val workingDays = (scState as? Resource.Success)?.data?.workingDays
-                    
                     BookingSectionHeader("Select Date", Icons.Default.Event)
+                    val workingDays = when (val scheduleState = dentistScheduleState) {
+                        is Resource.Success -> scheduleState.data.workingDays
+                        else -> null
+                    }
                     BookingDateSelector(
                         selected = selectedDate,
                         enabledDays = workingDays
-                    ) { 
+                    ) {
                         viewModel.checkAndFetchTimeslots(it)
                         selectedSlot = null
                     }
                 }
-                
+
                 // Time Section
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val scheduleState by viewModel.dentistSchedule.collectAsState()
-                    val scState = scheduleState
-                    val workingDays = (scState as? Resource.Success)?.data?.workingDays
-                    
                     BookingSectionHeader("Preferred Time", Icons.Default.AccessTime)
                     Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                        val isNonWorkingDay = workingDays != null && selectedDate.isNotEmpty() && run {
-                            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        val configuration = LocalConfiguration.current
+                        val locale = configuration.locales[0]
+                        val workingDays = when (val scheduleState = dentistScheduleState) {
+                            is Resource.Success -> scheduleState.data.workingDays
+                            else -> null
+                        }
+                        val isNonWorkingDay = (workingDays != null) && selectedDate.isNotEmpty() && run {
+                            val sdf = SimpleDateFormat("yyyy-MM-dd", locale)
                             val dayFormat = SimpleDateFormat("EEEE", Locale.US)
                             try {
                                 val date = sdf.parse(selectedDate)
                                 val dayName = dayFormat.format(date!!)
                                 workingDays.none { it.equals(dayName, ignoreCase = true) }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 false
                             }
                         }
@@ -339,12 +353,13 @@ fun AppointmentBookingScreen(
                                 modifier = Modifier.padding(16.dp)
                             )
                         } else {
-                            val aState = availableTimeslots
-                            when (aState) {
-                                is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = VibrantTeal) }
+                            when (val aState = availableTimeslots) {
+                                is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = VibrantTeal)
+                                }
                                 is Resource.Error -> Text(aState.message ?: "Select dentist first", color = SlateGray, modifier = Modifier.padding(16.dp))
                                 is Resource.Success -> {
-                                    val slots = aState.data ?: emptyList()
+                                    val slots = aState.data
                                     if (slots.isEmpty() && selectedDate.isNotEmpty()) {
                                         Text(
                                             text = "Dr. ${selectedDentist?.dentistName ?: doctorName} has no availability for the selected day.",
@@ -356,8 +371,8 @@ fun AppointmentBookingScreen(
                                         BookingTimeGrid(
                                             slots = slots,
                                             selectedSlot = selectedSlot
-                                        ) { 
-                                            selectedSlot = it 
+                                        ) {
+                                            selectedSlot = it
                                         }
                                     }
                                 }
@@ -372,7 +387,7 @@ fun AppointmentBookingScreen(
 
             // Bottom Continue Button
             AnimatedVisibility(
-                visible = ((selectedSlot != null) && (selectedServices.isNotEmpty()) && (selectedDentist != null) && (!isBookingConfirmed)),
+                visible = (selectedSlot != null) && selectedServices.isNotEmpty() && (selectedDentist != null) && (!isBookingConfirmed),
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -391,10 +406,7 @@ fun AppointmentBookingScreen(
                         VibrantButton(
                             text = if (bookingState is Resource.Loading) "Processing..." else "Authorize Booking",
                             onClick = {
-                                viewModel.createAppointment(
-                                    selectedDate,
-                                    selectedSlot!!
-                                )
+                                viewModel.createAppointment(selectedDate, selectedSlot!!)
                             },
                             enabled = bookingState !is Resource.Loading
                         )
@@ -419,7 +431,7 @@ fun DentistSelectionItem(dentist: DentistDTO, isSelected: Boolean, onClick: () -
     SelectionCard(
         isSelected = isSelected,
         onClick = onClick,
-        modifier = modifier.height(85.dp)
+        modifier = modifier.height(105.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
@@ -432,18 +444,26 @@ fun DentistSelectionItem(dentist: DentistDTO, isSelected: Boolean, onClick: () -
                     .background(if (isSelected) White.copy(alpha = 0.2f) else SoftMist),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Person, 
-                    null, 
-                    tint = if (isSelected) White else DeepTeal,
-                    modifier = Modifier.size(28.dp)
-                )
+                if (dentist.profileImage.isNullOrBlank()) {
+                    Icon(
+                        Icons.Default.Person,
+                        null,
+                        tint = if (isSelected) White else DeepTeal,
+                        modifier = Modifier.size(28.dp)
+                    )
+                } else {
+                    AsyncImage(
+                        model = dentist.profileImage,
+                        contentDescription = dentist.dentistName,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = dentist.dentistName, 
-                    fontWeight = FontWeight.Bold, 
+                    text = dentist.dentistName,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = if (isSelected) White else RoyalNavy,
                     maxLines = 1,
@@ -453,15 +473,51 @@ fun DentistSelectionItem(dentist: DentistDTO, isSelected: Boolean, onClick: () -
                     Box(modifier = Modifier.size(8.dp).background(Color(0xFF4CAF50), CircleShape))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Available", 
+                        text = "Availability:",
                         fontSize = 12.sp,
                         color = if (isSelected) White.copy(alpha = 0.8f) else Color(0xFF4CAF50),
                         fontWeight = FontWeight.Medium
                     )
                 }
+                Text(
+                    text = formatAvailability(dentist.daysOfWeek),
+                    fontSize = 12.sp,
+                    color = if (isSelected) White.copy(alpha = 0.8f) else RoyalNavy,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 14.dp)
+                )
             }
         }
     }
+}
+
+private fun formatAvailability(days: String?): String {
+    if (days.isNullOrBlank()) return "Not specified"
+
+    val abbreviations = listOf("Monday" to "Mon", "Tuesday" to "Tue", "Wednesday" to "Wed", "Thursday" to "Thur", "Friday" to "Fri", "Saturday" to "Sat", "Sunday" to "Sun")
+    val selected = days.split(",")
+        .map { it.trim() }
+        .mapNotNull { day -> abbreviations.indexOfFirst { it.first.equals(day, ignoreCase = true) }.takeIf { it >= 0 } }
+        .distinct()
+        .sorted()
+
+    if (selected.isEmpty()) return "Not specified"
+
+    val parts = mutableListOf<String>()
+    var index = 0
+    while (index < selected.size) {
+        var end = index
+        while (end + 1 < selected.size && selected[end + 1] == selected[end] + 1) end++
+        parts += if (end - index >= 2) {
+            "${abbreviations[selected[index]].second}-${abbreviations[selected[end]].second}"
+        } else {
+            (index..end).joinToString(", ") { abbreviations[selected[it]].second }
+        }
+        index = end + 1
+    }
+    return parts.joinToString(", ")
 }
 
 @Composable
@@ -469,21 +525,29 @@ fun BookingServiceItem(service: BookableServiceDTO, isSelected: Boolean, onClick
     SelectionCard(
         isSelected = isSelected,
         onClick = onClick,
-        modifier = modifier.height(70.dp)
+        modifier = modifier.height(92.dp)
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = service.serviceName, 
-                fontWeight = FontWeight.Bold, 
-                fontSize = 16.sp,
-                color = if (isSelected) White else RoyalNavy,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = service.serviceName ?: "Unknown Service",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (isSelected) White else RoyalNavy,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = service.price?.let { "PHP ${String.format(Locale.US, "%,.2f", it)}" } ?: "Price unavailable",
+                    fontSize = 12.sp,
+                    color = if (isSelected) White.copy(alpha = 0.85f) else DeepTeal,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
@@ -505,9 +569,9 @@ fun BookingTimeGrid(slots: List<AvailableSlotDTO>, selectedSlot: AvailableSlotDT
                         ) {
                             Box(modifier = Modifier.padding(vertical = 14.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
                                 Text(
-                                    text = slot.label, 
-                                    color = if (isSelected) White else RoyalNavy, 
-                                    fontSize = 14.sp, 
+                                    text = slot.label ?: "Unavailable",
+                                    color = if (isSelected) White else RoyalNavy,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -524,11 +588,9 @@ fun BookingTimeGrid(slots: List<AvailableSlotDTO>, selectedSlot: AvailableSlotDT
 fun BookingSuccessOverlay(doctorName: String, date: String, time: String, onDone: () -> Unit) {
     val primaryColor = DeepTeal
     val onPrimaryColor = White
-    
     val scale = remember { Animatable(0.7f) }
     val alpha = remember { Animatable(0f) }
     val currentOnDone by rememberUpdatedState(onDone)
-
     LaunchedEffect(Unit) {
         launch {
             scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
@@ -539,9 +601,8 @@ fun BookingSuccessOverlay(doctorName: String, date: String, time: String, onDone
         delay(3000.milliseconds)
         currentOnDone()
     }
-
     Surface(
-        modifier = Modifier.fillMaxSize(), 
+        modifier = Modifier.fillMaxSize(),
         color = primaryColor.copy(alpha = 0.98f)
     ) {
         Column(
@@ -549,8 +610,8 @@ fun BookingSuccessOverlay(doctorName: String, date: String, time: String, onDone
                 .fillMaxSize()
                 .padding(32.dp)
                 .scale(scale.value)
-                .alpha(alpha.value), 
-            horizontalAlignment = Alignment.CenterHorizontally, 
+                .alpha(alpha.value),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
@@ -564,7 +625,6 @@ fun BookingSuccessOverlay(doctorName: String, date: String, time: String, onDone
             Spacer(modifier = Modifier.height(24.dp))
             Text("Session Authorized", color = onPrimaryColor, fontWeight = FontWeight.Black, fontSize = 28.sp)
             Text("REDIRECTING TO HOME...", color = onPrimaryColor.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            
             Spacer(modifier = Modifier.height(48.dp))
             NeumorphicCard {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

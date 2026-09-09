@@ -17,7 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: AuthRepository,
-    private val addressRepository: AddressRepository
+    private val addressRepository: AddressRepository,
 ) : ViewModel() {
 
     // Update state
@@ -26,7 +26,6 @@ class ProfileViewModel @Inject constructor(
 
     // Address dropdown data
     private val _regions = MutableStateFlow<List<Region>>(emptyList())
-    val regions = _regions.asStateFlow()
 
     private val _provinces = MutableStateFlow<List<Province>>(emptyList())
     val provinces = _provinces.asStateFlow()
@@ -44,23 +43,8 @@ class ProfileViewModel @Inject constructor(
     // ---------- Address Helpers ----------
     private fun loadRegions() {
         viewModelScope.launch {
-            addressRepository.getRegions().let { result ->
-                if (result is Resource.Success) {
-                    _regions.value = result.data ?: emptyList()
-                }
-            }
-        }
-    }
-
-    fun onRegionSelected(regionCode: String) {
-        viewModelScope.launch {
-            _provinces.value = emptyList()
-            _cities.value = emptyList()
-            _barangays.value = emptyList()
-            addressRepository.getProvinces(regionCode).let { result ->
-                if (result is Resource.Success) {
-                    _provinces.value = result.data ?: emptyList()
-                }
+            (addressRepository.getRegions() as? Resource.Success)?.let {
+                _regions.value = it.data
             }
         }
     }
@@ -69,10 +53,8 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _cities.value = emptyList()
             _barangays.value = emptyList()
-            addressRepository.getCities(provinceCode).let { result ->
-                if (result is Resource.Success) {
-                    _cities.value = result.data ?: emptyList()
-                }
+            (addressRepository.getCities(provinceCode) as? Resource.Success)?.let {
+                _cities.value = it.data
             }
         }
     }
@@ -80,10 +62,8 @@ class ProfileViewModel @Inject constructor(
     fun onCitySelected(cityCode: String) {
         viewModelScope.launch {
             _barangays.value = emptyList()
-            addressRepository.getBarangays(cityCode).let { result ->
-                if (result is Resource.Success) {
-                    _barangays.value = result.data ?: emptyList()
-                }
+            (addressRepository.getBarangays(cityCode) as? Resource.Success)?.let {
+                _barangays.value = it.data
             }
         }
     }
@@ -93,7 +73,7 @@ class ProfileViewModel @Inject constructor(
     fun updateProfile(
         firstName: String,
         lastName: String,
-        email: String
+        email: String,
     ) {
         viewModelScope.launch {
             val currentUser = SessionManager.currentUser.value
@@ -113,14 +93,14 @@ class ProfileViewModel @Inject constructor(
                 streetAddress = currentUser.streetAddress ?: "",
                 province = currentUser.province ?: "",
                 city = currentUser.city ?: "",
-                barangay = currentUser.barangay ?: ""
+                barangay = currentUser.barangay ?: "",
             )
 
             _updateState.value = Resource.Loading
 
             val result = repository.updatePatientProfile(request)
 
-            if (result is Resource.Success) {
+            (result as? Resource.Success)?.let {
                 refreshProfile()
             }
 
@@ -136,7 +116,7 @@ class ProfileViewModel @Inject constructor(
             _updateState.value = Resource.Loading
             val result = repository.updatePatientProfile(request, profileImage)
 
-            if (result is Resource.Success) {
+            (result as? Resource.Success)?.let {
                 refreshProfile()
             }
 
@@ -152,10 +132,8 @@ class ProfileViewModel @Inject constructor(
         }
     }
     private suspend fun refreshProfile() {
-        repository.getPatientProfile().let { result ->
-            if (result is Resource.Success) {
-                SessionManager.updateProfile(result.data!!)
-            }
+        (repository.getPatientProfile() as? Resource.Success)?.let {
+            SessionManager.updateProfile(it.data)
         }
     }
 

@@ -1,5 +1,6 @@
 package com.example.clinexusapp.ui.screens.auth
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -32,13 +33,12 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
-import android.net.Uri
 
 @Composable
 fun RegisterScreen(
     viewModel: RegisterViewModel,
     onRegisterSuccess: (String) -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
 ) {
     var firstName by remember { mutableStateOf("") }
     var middleName by remember { mutableStateOf("") }
@@ -68,31 +68,35 @@ fun RegisterScreen(
     val context = LocalContext.current
     var profileImageUri by remember { mutableStateOf<Uri?>(null) }
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
         profileImageUri = uri
     }
 
     // 🟢 Compute form validity – all text fields and dropdowns must be filled
-    val isFormValid = firstName.isNotBlank() &&
-            lastName.isNotBlank() &&
-            email.isNotBlank() &&
-            phoneNumber.isNotBlank() &&
-            dateOfBirth.isNotBlank() &&
-            password.isNotBlank() &&
-            confirmPassword.isNotBlank() &&
-            streetAddress.isNotBlank() &&
-            selectedProvince != null &&
-            selectedCity != null &&
-            selectedBarangay != null
+    val isFormValid = (firstName.isNotBlank()) &&
+            (lastName.isNotBlank()) &&
+            (email.isNotBlank()) &&
+            (phoneNumber.isNotBlank()) &&
+            (dateOfBirth.isNotBlank()) &&
+            (password.isNotBlank()) &&
+            (confirmPassword.isNotBlank()) &&
+            (streetAddress.isNotBlank()) &&
+            (selectedProvince != null) &&
+            (selectedCity != null) &&
+            (selectedBarangay != null)
 
     val state = registerState
     LaunchedEffect(state, validationError) {
-        if (state is Resource.Success) {
-            onRegisterSuccess(email)
-            viewModel.resetState()
-        } else if (state is Resource.Error) {
-            snackbarHostState.showSnackbar(state.message ?: "Registration failed")
+        when (state) {
+            is Resource.Success -> {
+                onRegisterSuccess(email)
+                viewModel.resetState()
+            }
+            is Resource.Error -> {
+                snackbarHostState.showSnackbar(state.message ?: "Registration failed")
+            }
+            else -> {}
         }
 
         validationError?.let {
@@ -102,7 +106,7 @@ fun RegisterScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -111,19 +115,19 @@ fun RegisterScreen(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp),
-            contentPadding = PaddingValues(top = 40.dp, bottom = 40.dp)
+            contentPadding = PaddingValues(top = 40.dp, bottom = 40.dp),
         ) {
             item {
                 Text(
                     text = "Registration",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = "Join our network of elite care",
                     fontSize = 15.sp,
-                    color = SlateGray
+                    color = SlateGray,
                 )
             }
 
@@ -135,21 +139,21 @@ fun RegisterScreen(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                         .clickable { imagePickerLauncher.launch("image/*") },
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     if (profileImageUri != null) {
                         AsyncImage(
                             model = profileImageUri,
                             contentDescription = "Profile Picture",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
                         )
                     } else {
                         Icon(
                             Icons.Default.AddAPhoto,
                             contentDescription = "Add Photo",
                             modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -180,7 +184,7 @@ fun RegisterScreen(
                             selectedCity = null
                             selectedBarangay = null
                             region?.let { viewModel.onRegionSelected(it.code) }
-                        }
+                        },
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -195,7 +199,7 @@ fun RegisterScreen(
                             selectedBarangay = null
                             province?.let { viewModel.onProvinceSelected(it.code) }
                         },
-                        enabled = selectedRegion != null
+                        enabled = selectedRegion != null,
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -209,7 +213,7 @@ fun RegisterScreen(
                             selectedBarangay = null
                             city?.let { viewModel.onCitySelected(it.code) }
                         },
-                        enabled = selectedProvince != null
+                        enabled = selectedProvince != null,
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -220,7 +224,7 @@ fun RegisterScreen(
                         onOptionSelected = { name ->
                             selectedBarangay = barangays.find { it.displayName == name }
                         },
-                        enabled = selectedCity != null
+                        enabled = selectedCity != null,
                     )
                 }
             }
@@ -250,7 +254,7 @@ fun RegisterScreen(
                     text = if (registerState is Resource.Loading) "Processing..." else "Create Account",
                     onClick = {
                         val imagePart = profileImageUri?.let { uri ->
-                            uriToMultipart(context, uri, "file")
+                            uriToMultipart(context, uri)
                         }
                         viewModel.register(
                             email, password, confirmPassword, firstName, middleName, lastName, phoneNumber, dateOfBirth,
@@ -258,11 +262,11 @@ fun RegisterScreen(
                             selectedProvince?.displayName ?: "",
                             selectedCity?.displayName ?: "",
                             selectedBarangay?.displayName ?: "",
-                            imagePart
+                            imagePart,
                         )
                     },
                     // 🟢 Button is enabled only if form is valid and not already loading
-                    enabled = registerState !is Resource.Loading && isFormValid
+                    enabled = (registerState !is Resource.Loading) && isFormValid,
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -277,7 +281,7 @@ fun RegisterScreen(
     }
 }
 
-private fun uriToMultipart(context: android.content.Context, uri: Uri, partName: String): MultipartBody.Part? {
+private fun uriToMultipart(context: android.content.Context, uri: Uri): MultipartBody.Part? {
     return try {
         val contentResolver = context.contentResolver
         val file = File(context.cacheDir, "temp_profile_image_${System.currentTimeMillis()}.jpg")
@@ -287,7 +291,7 @@ private fun uriToMultipart(context: android.content.Context, uri: Uri, partName:
             }
         }
         val requestFile = file.asRequestBody(contentResolver.getType(uri)?.toMediaTypeOrNull())
-        MultipartBody.Part.createFormData(partName, file.name, requestFile)
+        MultipartBody.Part.createFormData("file", file.name, requestFile)
     } catch (e: Exception) {
         e.printStackTrace()
         null
@@ -301,9 +305,9 @@ fun AddressDropdown(
     options: List<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(value = false) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -311,12 +315,12 @@ fun AddressDropdown(
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
+            modifier = Modifier.padding(start = 6.dp, bottom = 8.dp),
         )
         ExposedDropdownMenuBox(
             expanded = expanded && enabled,
             onExpandedChange = { if (enabled) expanded = !expanded },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             OutlinedTextField(
                 value = selectedOption,
@@ -324,7 +328,7 @@ fun AddressDropdown(
                 readOnly = true,
                 placeholder = { Text("Select $label", fontSize = 14.sp) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                modifier = Modifier.menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
                 enabled = enabled,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -334,13 +338,13 @@ fun AddressDropdown(
                     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                     disabledContainerColor = Color.LightGray.copy(alpha = 0.1f),
                     disabledBorderColor = Color.Transparent,
-                    disabledTextColor = Color.Gray
-                )
+                    disabledTextColor = Color.Gray,
+                ),
             )
             ExposedDropdownMenu(
                 expanded = expanded && enabled,
                 onDismissRequest = { expanded = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface),
             ) {
                 options.forEach { selectionOption ->
                     DropdownMenuItem(
@@ -349,7 +353,7 @@ fun AddressDropdown(
                             onOptionSelected(selectionOption)
                             expanded = false
                         },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
                 }
             }

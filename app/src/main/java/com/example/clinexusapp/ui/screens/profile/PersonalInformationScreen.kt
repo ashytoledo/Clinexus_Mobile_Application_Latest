@@ -18,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.clinexusapp.model.UpdateProfileRequest
 import com.example.clinexusapp.ui.components.*
@@ -40,7 +39,7 @@ fun PersonalInformationScreen(onBack: () -> Unit, viewModel: ProfileViewModel) {
     val context = LocalContext.current
     var profileImageUri by remember { mutableStateOf<Uri?>(null) }
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
         profileImageUri = uri
     }
@@ -55,7 +54,6 @@ fun PersonalInformationScreen(onBack: () -> Unit, viewModel: ProfileViewModel) {
     var city by remember { mutableStateOf(user?.city ?: "") }
     var barangay by remember { mutableStateOf(user?.barangay ?: "") }
 
-    val regions by viewModel.regions.collectAsState()
     val provinces by viewModel.provinces.collectAsState()
     val cities by viewModel.cities.collectAsState()
     val barangays by viewModel.barangays.collectAsState()
@@ -63,14 +61,14 @@ fun PersonalInformationScreen(onBack: () -> Unit, viewModel: ProfileViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Form validity – all fields including email must be filled
-    val isFormValid = firstName.isNotBlank() &&
-            lastName.isNotBlank() &&
-            phoneNumber.isNotBlank() &&
-            dateOfBirth.isNotBlank() &&
-            streetAddress.isNotBlank() &&
-            province.isNotBlank() &&
-            city.isNotBlank() &&
-            barangay.isNotBlank() &&
+    val isFormValid = (firstName.isNotBlank()) &&
+            (lastName.isNotBlank()) &&
+            (phoneNumber.isNotBlank()) &&
+            (dateOfBirth.isNotBlank()) &&
+            (streetAddress.isNotBlank()) &&
+            (province.isNotBlank()) &&
+            (city.isNotBlank()) &&
+            (barangay.isNotBlank()) &&
             (user?.email?.isNotBlank() == true)
 
     LaunchedEffect(user) {
@@ -89,12 +87,16 @@ fun PersonalInformationScreen(onBack: () -> Unit, viewModel: ProfileViewModel) {
 
     val state = updateState
     LaunchedEffect(state) {
-        if (state is Resource.Success) {
-            snackbarHostState.showSnackbar("Profile updated successfully")
-            profileImageUri = null // Clear local selection to show updated server image
-            viewModel.resetState()
-        } else if (state is Resource.Error) {
-            snackbarHostState.showSnackbar(state.message ?: "Update failed")
+        when (state) {
+            is Resource.Success -> {
+                snackbarHostState.showSnackbar("Profile updated successfully")
+                profileImageUri = null // Clear local selection to show updated server image
+                viewModel.resetState()
+            }
+            is Resource.Error -> {
+                snackbarHostState.showSnackbar(state.message ?: "Update failed")
+            }
+            else -> {}
         }
     }
 
@@ -223,7 +225,7 @@ fun PersonalInformationScreen(onBack: () -> Unit, viewModel: ProfileViewModel) {
                     text = if (updateState is Resource.Loading) "Updating..." else "Save Changes",
                     onClick = {
                         val imagePart = profileImageUri?.let { uri ->
-                            uriToMultipart(context, uri, "file")
+                            uriToMultipart(context, uri)
                         }
                         viewModel.updateFullProfile(
                             UpdateProfileRequest(
@@ -241,14 +243,14 @@ fun PersonalInformationScreen(onBack: () -> Unit, viewModel: ProfileViewModel) {
                             imagePart
                         )
                     },
-                    enabled = updateState !is Resource.Loading && isFormValid
+                    enabled = (updateState !is Resource.Loading) && isFormValid
                 )
             }
         }
     }
 }
 
-private fun uriToMultipart(context: android.content.Context, uri: Uri, partName: String): MultipartBody.Part? {
+private fun uriToMultipart(context: android.content.Context, uri: Uri): MultipartBody.Part? {
     return try {
         val contentResolver = context.contentResolver
         val file = File(context.cacheDir, "temp_profile_image_${System.currentTimeMillis()}.jpg")
@@ -258,7 +260,7 @@ private fun uriToMultipart(context: android.content.Context, uri: Uri, partName:
             }
         }
         val requestFile = file.asRequestBody(contentResolver.getType(uri)?.toMediaTypeOrNull())
-        MultipartBody.Part.createFormData(partName, file.name, requestFile)
+        MultipartBody.Part.createFormData("file", file.name, requestFile)
     } catch (e: Exception) {
         e.printStackTrace()
         null

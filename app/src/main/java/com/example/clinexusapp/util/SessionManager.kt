@@ -14,10 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * Secure Session Manager (Native Android equivalent to Flutter Secure Storage)
- * Handles hardware-backed encryption for JWT tokens and sensitive patient data.
- */
+
 @Suppress("DEPRECATION") // EncryptedSharedPreferences is deprecated in favor of Jetpack DataStore + Tink
 object SessionManager {
     private const val TAG = "SessionManager"
@@ -28,7 +25,7 @@ object SessionManager {
     private val _currentUser = MutableStateFlow<PatientInfo?>(null)
     val currentUser = _currentUser.asStateFlow()
 
-    private val _isInitialized = MutableStateFlow(false)
+    private val _isInitialized = MutableStateFlow(value = false)
     val isInitialized = _isInitialized.asStateFlow()
 
     private var _token: String? = null
@@ -95,8 +92,8 @@ object SessionManager {
         sharedPreferences?.edit {
             putString(KEY_TOKEN, token)
             putString(KEY_PATIENT_INFO, Gson().toJson(patient))
-            android.util.Log.d(TAG, "Session saved successfully for patient ID: ${patient.patientID}")
-        } ?: android.util.Log.w(TAG, "saveSession called but sharedPreferences is null")
+            Log.d(TAG, "Session saved successfully for patient ID: ${patient.patientID}")
+        } ?: Log.w(TAG, "saveSession called but sharedPreferences is null")
     }
 
     fun updateProfile(patient: PatientInfo) {
